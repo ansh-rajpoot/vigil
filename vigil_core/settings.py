@@ -117,11 +117,11 @@ if DATABASE_URL:
             default=DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=(not DEBUG and 'localhost' not in DATABASE_URL and '127.0.0.1' not in DATABASE_URL)
+            ssl_require=(not DEBUG and 'localhost' not in DATABASE_URL and '127.0.0.1' not in DATABASE_URL and 'sqlite' not in DATABASE_URL)
         )
     }
-else:
-    # Local / Containerized PostgreSQL parameters
+elif os.getenv('DB_NAME') and os.getenv('DB_USER'):
+    # Dedicated PostgreSQL parameters
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -132,6 +132,14 @@ else:
             'PORT': os.getenv('DB_PORT', '5432'),
             'CONN_MAX_AGE': 600,
             'CONN_HEALTH_CHECKS': True,
+        }
+    }
+else:
+    # Local & Single-instance fallback
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 

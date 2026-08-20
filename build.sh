@@ -19,10 +19,15 @@ echo "======================================================="
 python manage.py collectstatic --no-input
 
 echo "======================================================="
-echo "🗄️ [3/3] Applying PostgreSQL Database Migrations..."
+echo "🗄️ [3/4] Applying Database Migrations..."
 echo "======================================================="
 python manage.py migrate --no-input
 
 echo "======================================================="
-echo "✅ Build Completed Successfully! Ready for ASGI Start."
+echo "🌱 [4/4] Auto-Seeding Demo Accounts, POIs & Scenario Data..."
+echo "======================================================="
+python populate_demo_data.py
+
+echo "======================================================="
+echo "✅ Build & Database Initialization Completed Successfully!"
 echo "======================================================="
