@@ -1,0 +1,43 @@
+# ==============================================================================
+# VIGIL — Render Infrastructure as Code (Blueprint)
+# Defines Web Service (ASGI / Daphne / WebSockets) & PostgreSQL Database
+# ==============================================================================
+
+databases:
+  - name: vigil-postgres-db
+    databaseName: vigil_db
+    user: vigil_user
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: vigil-public-safety
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: daphne -b 0.0.0.0 -p $PORT vigil_core.asgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com,localhost,127.0.0.1"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: SESSION_COOKIE_SECURE
+        value: "True"
+      - key: CSRF_COOKIE_SECURE
+        value: "True"
+      - key: CHANNEL_LAYER_BACKEND
+        value: inmemory
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vigil-postgres-db
+          property: connectionString

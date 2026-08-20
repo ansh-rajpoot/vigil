@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Safe Route Navigator — VIGIL{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <h1 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom:0.25rem;">Safe Route & Threat-Avoidance Navigator</h1>
+      <p style="font-size: 0.875rem; color: #64748b; margin:0;">
+        Multi-criteria safety-weighted routing powered by real road networks and live PostGIS threat intelligence. Dynamically circumvents unlit alleys, crime blackspots, and restricted areas.
+      </p>
+    </div>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+      <span class="badge badge-safe" style="font-size:0.75rem;">🛡️ Real-Time Safety AI Active</span>
+    </div>
+  </div>
+</div>
+
+<!-- Dynamic Error / Notice Banner Container -->
+<div id="route-error-banner" style="display:none; margin-bottom: 1rem;" class="alert-banner alert-banner-critical">
+  <span>⚠️</span>
+  <div id="route-error-text">Route calculation failed.</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 420px 1fr; gap: 1.5rem; align-items: start;">
+
+  <!-- Left Sidebar Controls -->
+  <div style="display: flex; flex-direction: column; gap: 1rem;">
+
+    <!-- Route Planner Form Card -->
+    <div class="card" style="box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.125rem;">🗺️</span>
+          <span class="card-title" style="margin:0; font-size:0.9375rem; font-weight:700;">Place-to-Place Safe Planner</span>
+        </div>
+        <div style="display:flex; gap:0.25rem;">
+          <button type="button" id="mode-walk-btn" class="btn btn-primary btn-sm" style="font-size:0.75rem; padding:0.25rem 0.6rem;">🚶 Walk</button>
+          <button type="button" id="mode-drive-btn" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.25rem 0.6rem;">🚗 Drive</button>
+        </div>
+      </div>
+
+      <div class="card-body" style="padding:1.25rem;">
+        <form id="safe-route-form">
+          <input type="hidden" id="travel_mode" value="walking">
+
+          <!-- 1. Origin Place Input -->
+          <div class="form-group" style="margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+              <label class="form-label" style="margin-bottom:0; font-weight:700; color:#1e293b; font-size:0.8125rem;" for="orig_place_input">
+                🟢 Starting Point / Origin Place *
+              </label>
+              <button type="button" id="btn-use-my-location" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.75rem; font-weight:600; padding:0.2rem 0.5rem; border-radius:4px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                <span>📍</span> Use My GPS
+              </button>
+            </div>
+            <div style="position:relative;">
+              <input type="text" id="orig_place_input" list="places-catalog-list" class="form-input" style="font-size:0.875rem; padding-left:2.25rem; font-weight:500;" placeholder="Search start place or landmark (e.g. Pari Chowk Greater Noida)..." value="Pari Chowk & Knowledge Park Safety Hub" autocomplete="off">
+              <span style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); font-size:0.9375rem; color:#10b981;">🟢</span>
+            </div>
+
+            <!-- Quick Start Chips -->
+            <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.35rem;">
+              <button type="button" class="btn btn-secondary btn-sm js-quick-orig" data-place="Pari Chowk & Knowledge Park Safety Hub" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f1f5f9; border-color:#e2e8f0; color:#334155;">Pari Chowk</button>
+              <button type="button" class="btn btn-secondary btn-sm js-quick-orig" data-place="Noida Sector 18 Commercial Hub & Atta Market" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f1f5f9; border-color:#e2e8f0; color:#334155;">Noida Sec 18</button>
+              <button type="button" class="btn btn-secondary btn-sm js-quick-orig" data-place="India Gate & Kartavya Path High-Security Zone" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f1f5f9; border-color:#e2e8f0; color:#334155;">India Gate</button>
+              <button type="button" class="btn btn-secondary btn-sm js-quick-orig" data-place="Gateway of India & Taj Mahal Palace" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f1f5f9; border-color:#e2e8f0; color:#334155;">Gateway of India</button>
+            </div>
+          </div>
+
+          <!-- 2. Destination Place Input -->
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" style="margin-bottom:0.35rem; font-weight:700; color:#1e293b; font-size:0.8125rem;" for="dest_place_input">
+              🔴 Destination Place / Safe Haven *
+            </label>
+            <div style="position:relative;">
+              <input type="text" id="dest_place_input" list="places-catalog-list" class="form-input" style="font-size:0.875rem; padding-left:2.25rem; font-weight:500;" placeholder="Search destination (e.g. Sharda Hospital / Police Station)..." value="Sharda Hospital & Trauma Centre (Knowledge Park III)" autocomplete="off">
+              <span style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); font-size:0.9375rem; color:#ef4444;">🔴</span>
+            </div>
+
+            <!-- Quick Destination Chips -->
+            <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.35rem;">
+              <button type="button" class="btn btn-secondary btn-sm js-quick-dest" data-place="Calangute Tourist Police Station" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#eff6ff; border-color:#bfdbfe; color:#1e40af; font-weight:600;">Calangute Police 👮</button>
+              <button type="button" class="btn btn-secondary btn-sm js-quick-dest" data-place="Candolim 24x7 Emergency Trauma Care" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f0fdf4; border-color:#bbf7d0; color:#166534; font-weight:600;">Candolim EMS 🏥</button>
+              <button type="button" class="btn btn-secondary btn-sm js-quick-dest" data-place="Miramar Beach Promenade" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f1f5f9; border-color:#e2e8f0; color:#334155;">Miramar Beach 🏖️</button>
+              <button type="button" class="btn btn-secondary btn-sm js-quick-dest" data-place="Fort Aguada & Historic Lighthouse" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f1f5f9; border-color:#e2e8f0; color:#334155;">Fort Aguada 🏰</button>
+              <button type="button" class="btn btn-secondary btn-sm js-quick-dest" data-place="Anjuna Beach & Flea Market" style="font-size:0.6875rem; padding:0.15rem 0.4rem; background:#f1f5f9; border-color:#e2e8f0; color:#334155;">Anjuna 🏖️</button>
+            </div>
+          </div>
+
+          <!-- Places Datalist Autocomplete Catalog -->
+          <datalist id="places-catalog-list">
+            {% for p in places %}
+            <option value="{{ p.name }}">{{ p.category_display }} — {{ p.address }}</option>
+            {% endfor %}
+          </datalist>
+
+          <!-- Interactive Map Click Switch -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.75rem; margin-bottom:1rem; font-size:0.75rem; color:#475569; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-weight:600; color:#334155;">💡 Click map to set:</span>
+            <div style="display:flex; gap:0.75rem;">
+              <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; font-weight:600; color:#dc2626;">
+                <input type="radio" name="map_click_mode" value="dest" checked> Destination (B)
+              </label>
+              <label style="display:flex; align-items:center; gap:0.25rem; cursor:pointer; font-weight:600; color:#059669;">
+                <input type="radio" name="map_click_mode" value="orig"> Start (A)
+              </label>
+            </div>
+          </div>
+
+          <!-- Collapsible Advanced GPS Coordinates Drawer (For Power Users) -->
+          <details style="margin-bottom:1rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.4rem 0.75rem; font-size:0.75rem; color:#64748b;">
+            <summary style="cursor:pointer; font-weight:600; color:#475569;">⚙️ Advanced: View / Edit Exact GPS Coordinates</summary>
+            <div style="padding-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;">
+              <div>
+                <label style="font-size:0.6875rem; color:#64748b; font-weight:600;">Origin Coordinates (Lat, Lng)</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                  <input type="number" step="0.0001" id="orig_lat" class="form-input tabular-nums" placeholder="Latitude" value="{{ profile.current_latitude|default:'15.4989' }}">
+                  <input type="number" step="0.0001" id="orig_lng" class="form-input tabular-nums" placeholder="Longitude" value="{{ profile.current_longitude|default:'73.8278' }}">
+                </div>
+              </div>
+              <div>
+                <label style="font-size:0.6875rem; color:#64748b; font-weight:600;">Destination Coordinates (Lat, Lng)</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                  <input type="number" step="0.0001" id="dest_lat" class="form-input tabular-nums" placeholder="Latitude" value="15.5410">
+                  <input type="number" step="0.0001" id="dest_lng" class="form-input tabular-nums" placeholder="Longitude" value="73.7570">
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Calculate Route Button -->
+          <button type="button" id="btn-calculate-route" class="btn btn-primary" style="width: 100%; font-weight:700; font-size:0.9375rem; padding:0.65rem;">
+            <span>🛡️</span> Calculate Safest Corridor
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Active Safety Results Card (Dynamic) -->
+    <div id="route-results-card" class="card" style="display:none; border-top:4px solid #059669; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12);">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; background:#f0fdf4; border-bottom:1px solid #bbf7d0;">
+        <div style="display:flex; align-items:center; gap:0.4rem;">
+          <span style="font-size:1rem;">✅</span>
+          <span class="card-title" style="margin:0; font-size:0.875rem; font-weight:700; color:#166534;">Verified Safe Corridor</span>
+        </div>
+        <span id="route-detour-badge" class="badge badge-warning" style="display:none; font-size:0.6875rem;">Hazard Evasion Active</span>
+      </div>
+
+      <div class="card-body" style="padding:1.25rem;">
+        <!-- Route Trip Title -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.65rem 0.75rem; margin-bottom:0.85rem;">
+          <div style="font-size:0.6875rem; color:#64748b; font-weight:600; text-transform:uppercase;">Evaluated Route Corridor</div>
+          <div style="font-weight:700; font-size:0.875rem; color:#0f172a; margin-top:0.15rem; display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+            <span id="route-origin-display" style="color:#059669;">Origin</span>
+            <span>➔</span>
+            <span id="route-dest-display" style="color:#dc2626;">Destination</span>
+          </div>
+        </div>
+
+        <!-- 3 KPI Badges -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align:center; background:#f8fafc; padding:0.75rem; border-radius:6px; margin-bottom:0.85rem; border:1px solid #e2e8f0;">
+          <div>
+            <div style="font-size:0.6875rem; color:#64748b; text-transform:uppercase; font-weight:600;">Safety Score</div>
+            <div id="route-safety-score" style="font-weight:800; font-size:1.35rem; color:#059669;">94%</div>
+          </div>
+          <div>
+            <div style="font-size:0.6875rem; color:#64748b; text-transform:uppercase; font-weight:600;">Distance</div>
+            <div id="route-distance" style="font-weight:700; font-size:1.125rem; color:#0f172a;">2.8 km</div>
+          </div>
+          <div>
+            <div style="font-size:0.6875rem; color:#64748b; text-transform:uppercase; font-weight:600;">Est. Time</div>
+            <div id="route-eta" style="font-weight:700; font-size:1.125rem; color:#0f172a;">~18 min</div>
+          </div>
+        </div>
+
+        <!-- Safety Details Breakdown -->
+        <div style="display:flex; flex-direction:column; gap:0.4rem; font-size:0.75rem; margin-bottom:0.85rem;">
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#64748b;">Illumination:</span>
+            <span id="route-lighting" style="font-weight:600; color:#059669;">Well-Lit Arterial Corridor</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#64748b;">Police Patrols:</span>
+            <span id="route-patrol" style="font-weight:600; color:#1e3a8a;">High-frequency 24x7</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#64748b;">Routing Engine:</span>
+            <span id="route-provider" style="font-family:var(--font-mono); font-size:0.6875rem; color:#64748b;">OSRM OpenStreetMap</span>
+          </div>
+        </div>
+
+        <!-- Turn-by-Turn Safety Guidance -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem; margin-bottom:0.85rem;">
+          <div style="font-weight:700; color:#1e293b; font-size:0.75rem; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.3rem;">
+            <span>🧭</span> Safety Navigation Guidance:
+          </div>
+          <ol id="route-directions-list" style="margin:0; padding-left:1.15rem; font-size:0.75rem; color:#334155; line-height:1.5;"></ol>
+        </div>
+
+        <!-- Hazards / Advisories list -->
+        <div id="route-hazards-box" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:0.5rem; margin-bottom:0.75rem;">
+          <div style="font-weight:700; color:#991b1b; font-size:0.6875rem; margin-bottom:0.25rem;">DETECTED THREATS & AVOIDED BLACKSPOTS:</div>
+          <ul id="route-hazards-list" style="margin:0; padding-left:1rem; font-size:0.6875rem; color:#b91c1c;"></ul>
+        </div>
+
+        <!-- Nearby Emergency Safeguards -->
+        <div id="route-safeguards-box" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:0.5rem;">
+          <div style="font-weight:700; color:#166534; font-size:0.6875rem; margin-bottom:0.25rem;">NEARBY EMERGENCY SAFEGUARDS:</div>
+          <div id="route-safeguards-list" style="font-size:0.6875rem; color:#15803d;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verified Popular Safe Corridors Presets -->
+    <div class="card">
+      <div class="card-header" style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+        <span class="card-title" style="font-size:0.875rem; font-weight:700;">Verified Popular Safe Corridors</span>
+      </div>
+      <div class="card-body" style="padding: 0.5rem; display:flex; flex-direction:column; gap:0.4rem;">
+        <button type="button" class="btn btn-secondary btn-sm js-preset-route" style="width:100%; justify-content:flex-start; text-align:left; padding:0.6rem 0.75rem;"
+                data-orig="Baga Beach Main Promenade" data-dest="Calangute Tourist Police Station"
+                data-olat="15.5528" data-olng="73.7517" data-dlat="15.5410" data-dlng="73.7570">
+          <div>
+            <div style="font-weight:700; font-size:0.8125rem; color:#0f172a;">Baga Beach &rarr; Calangute Police Outpost</div>
+            <div style="font-size:0.6875rem; color:#64748b;">Illuminated Tourist Walkway • 95% Safety Score</div>
+          </div>
+        </button>
+
+        <button type="button" class="btn btn-secondary btn-sm js-preset-route" style="width:100%; justify-content:flex-start; text-align:left; padding:0.6rem 0.75rem;"
+                data-orig="Panaji Church (Immaculate Conception)" data-dest="Miramar Beach Promenade"
+                data-olat="15.4989" data-olng="73.8278" data-dlat="15.4856" data-dlng="73.8089">
+          <div>
+            <div style="font-weight:700; font-size:0.8125rem; color:#0f172a;">Panaji Church &rarr; Miramar Beach</div>
+            <div style="font-size:0.6875rem; color:#64748b;">Police Patrol Corridor • 92% Safety Score</div>
+          </div>
+        </button>
+
+        <button type="button" class="btn btn-secondary btn-sm js-preset-route" style="width:100%; justify-content:flex-start; text-align:left; padding:0.6rem 0.75rem;"
+                data-orig="Candolim Beach Walkway" data-dest="Fort Aguada & Historic Lighthouse"
+                data-olat="15.5180" data-olng="73.7660" data-dlat="15.4920" data-dlng="73.7730">
+          <div>
+            <div style="font-weight:700; font-size:0.8125rem; color:#0f172a;">Candolim &rarr; Fort Aguada</div>
+            <div style="font-size:0.6875rem; color:#64748b;">Scenic Heritage Corridor • Well-Lit Route</div>
+          </div>
+        </button>
+
+        <button type="button" class="btn btn-secondary btn-sm js-preset-route" style="width:100%; justify-content:flex-start; text-align:left; padding:0.6rem 0.75rem;"
+                data-orig="Anjuna Beach & Flea Market" data-dest="Vagator Hilltop & Small Vagator Beach"
+                data-olat="15.5786" data-olng="73.7412" data-dlat="15.6030" data-dlng="73.7330">
+          <div>
+            <div style="font-weight:700; font-size:0.8125rem; color:#0f172a;">Anjuna Beach &rarr; Vagator Cliffs</div>
+            <div style="font-size:0.6875rem; color:#64748b;">Cliff Hazard Warning Detour • Safety Score Evaluated</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Map Canvas -->
+  <div class="card" style="height: 680px; padding: 0; position: relative; overflow:hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);">
+    <div id="safe-route-map" style="width: 100%; height: 100%; border-radius: 8px;"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/safe_routing.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,877 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}City & Place Safety Explorer — VIGIL{% endblock %}
+
+{% block extra_css %}
+<style>
+  .safety-explorer-wrapper {
+    max-width: 1440px;
+    margin: 0.5rem auto;
+    padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Top Control Card */
+  .explorer-top-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  /* City Filter Tabs */
+  .city-tabs-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .city-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+  }
+
+  .city-tab-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+  }
+
+  .city-tab-btn.active {
+    background: #1e3a8a;
+    color: #ffffff;
+    border-color: #1e3a8a;
+    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+    font-weight: 700;
+  }
+
+  /* Main Split Grid */
+  .explorer-main-grid {
+    display: grid;
+    grid-template-columns: 460px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (max-width: 1024px) {
+    .explorer-main-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Place Cards List */
+  .places-scroll-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    max-height: calc(100vh - 240px);
+    min-height: 550px;
+    overflow-y: auto;
+    padding-right: 0.4rem;
+  }
+
+  .place-card-item {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .place-card-item:hover {
+    transform: translateY(-2px);
+    border-color: #0284c7;
+    box-shadow: 0 8px 18px rgba(2, 132, 199, 0.12);
+  }
+
+  .place-card-item.is-selected {
+    border-color: #1e3a8a !important;
+    background: #f8fafc;
+    box-shadow: 0 0 0 2px #1e3a8a, 0 8px 20px rgba(30, 58, 138, 0.15) !important;
+  }
+
+  /* Right Map Canvas Container */
+  .explorer-map-wrapper {
+    position: sticky;
+    top: 1rem;
+    width: 100%;
+    height: calc(100vh - 240px);
+    min-height: 550px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  #place-safety-map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: #e2e8f0;
+  }
+
+  /* Floating Map Style Switcher */
+  .map-style-float {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    display: flex;
+    gap: 0.25rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    padding: 0.25rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  }
+
+  .map-style-btn {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #475569;
+    background: transparent;
+    border: none;
+    padding: 0.3rem 0.55rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .map-style-btn.active {
+    background: #0f172a;
+    color: #ffffff;
+  }
+
+  /* Target Pulse Animation on Map */
+  .area-focus-pulse {
+    border: 3.5px solid #0284c7;
+    border-radius: 50%;
+    background: rgba(2, 132, 199, 0.2);
+    animation: areaPulse 1.6s infinite;
+  }
+
+  @keyframes areaPulse {
+    0% { transform: scale(0.6); opacity: 1; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="safety-explorer-wrapper">
+
+  <!-- Top Intelligence & City Selector Card -->
+  <div class="explorer-top-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+      <div>
+        <h1 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin:0 0 0.2rem 0;">Tourist Places & City Safety Intelligence</h1>
+        <p style="font-size: 0.8125rem; color: #64748b; margin:0;">
+          Select any city or tourist place to instantly focus the map, view live PCR patrols, active hazards, and safety ratings.
+        </p>
+      </div>
+      <div style="display:flex; gap:0.4rem; align-items:center;">
+        <a href="{% url 'maps:gis_explorer' %}" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.35rem 0.7rem;">
+          <span>🗺️</span> Full GIS Layers
+        </a>
+        <a href="{% url 'maps:safe_routes' %}" class="btn btn-primary btn-sm" style="font-size:0.75rem; padding:0.35rem 0.7rem;">
+          <span>🧭</span> Safe Route Planner
+        </a>
+      </div>
+    </div>
+
+    <!-- City Filter Selector Tabs -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+      <div class="city-tabs-container" id="city-filter-buttons">
+        <button type="button" class="city-tab-btn active" data-city="ALL">🌐 All 5 Cities</button>
+        <button type="button" class="city-tab-btn" data-city="MUMBAI">🏙️ Mumbai</button>
+        <button type="button" class="city-tab-btn" data-city="DELHI">🏛️ Delhi (NCR)</button>
+        <button type="button" class="city-tab-btn" data-city="NOIDA">🏢 Noida</button>
+        <button type="button" class="city-tab-btn" data-city="JAIPUR">🏰 Jaipur</button>
+        <button type="button" class="city-tab-btn" data-city="AGRA">🕌 Agra</button>
+      </div>
+
+      <!-- Live Search Autocomplete Input -->
+      <div style="position:relative; min-width:280px; flex:1; max-width:380px;">
+        <input type="text" id="place-search-input" class="form-input" placeholder="🔍 Search place or area (e.g. Gateway of India, Taj Mahal)..." style="font-size:0.8125rem; padding:0.4rem 2rem 0.4rem 0.75rem; width:100%; border-radius:8px;">
+        <button type="button" id="clear-search-btn" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; display:none;">✕</button>
+      </div>
+    </div>
+
+    <!-- Dynamic City Intelligence Ribbon -->
+    <div id="city-intelligence-ribbon" style="padding-top:0.6rem; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; font-size:0.75rem;">
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span style="font-weight:800; color:#0f172a;" id="ribbon-city-name">National Tourist Safety Grid</span>
+        <span class="badge badge-safe" id="ribbon-city-badge" style="font-size:0.6875rem;">92% AVERAGE SAFETY INDEX</span>
+      </div>
+      <div style="display:flex; gap:1rem; color:#64748b; font-size:0.75rem; flex-wrap:wrap;">
+        <span>🚔 Active PCR Patrols: <b style="color:#0f172a;" id="ribbon-pcr-count">100+ Patrol Vans</b></span>
+        <span>📞 Police Helpline: <b style="color:#1e40af;" id="ribbon-police-phone">112 / 100</b></span>
+        <span>🚑 Ambulance EMS: <b style="color:#059669;" id="ribbon-ems-phone">108</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Split Grid: Left Places Cards & Right Interactive Map -->
+  <div class="explorer-main-grid">
+
+    <!-- Left Column: Places Cards List -->
+    <div style="display:flex; flex-direction:column; gap:0.6rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:0 0.2rem;">
+        <span style="font-size:0.8125rem; font-weight:700; color:#475569;" id="places-count-label">Showing All Verified Tourist Locations</span>
+        <span style="font-size:0.6875rem; color:#64748b;">Click card to focus map 📍</span>
+      </div>
+
+      <div id="places-cards-container" class="places-scroll-list">
+        {% for p in places %}
+        <div class="place-card-item js-place-card" 
+             id="card-place-{{ p.id|default:forloop.counter }}"
+             data-place-id="{{ p.id|default:p.name }}"
+             data-city="{{ p.city_code }}" 
+             data-name="{{ p.name|lower }}" 
+             data-display-name="{{ p.name }}"
+             data-lat="{{ p.latitude }}" 
+             data-lng="{{ p.longitude }}"
+             data-score="{{ p.safety_score }}"
+             data-level="{{ p.safety_level }}"
+             onclick="window.placeSafetyExplorer.selectAndFocusPlace('{{ p.name|escapejs }}', {{ p.latitude }}, {{ p.longitude }}, this)"
+             style="border-left: 4px solid {% if p.safety_score >= 90 %}#059669{% elif p.safety_score >= 80 %}#0284c7{% else %}#d97706{% endif %};">
+
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.35rem;">
+            <div>
+              <span class="badge {% if p.city_code == 'MUMBAI' %}badge-secondary{% elif p.city_code == 'DELHI' %}badge-warning{% elif p.city_code == 'JAIPUR' %}badge-safe{% elif p.city_code == 'AGRA' %}badge-critical{% else %}badge-secondary{% endif %}" style="font-size:0.625rem; margin-bottom:0.2rem;">
+                {{ p.city_name }}
+              </span>
+              <h3 style="font-size:0.9375rem; font-weight:800; color:#0f172a; margin:0.15rem 0 0 0;">{{ p.name }}</h3>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.15rem; font-weight:800; color:{% if p.safety_score >= 90 %}#059669{% elif p.safety_score >= 80 %}#0284c7{% else %}#d97706{% endif %};">
+                {{ p.safety_score }}%
+              </div>
+              <span style="font-size:0.5875rem; font-weight:700; color:#64748b; text-transform:uppercase;">{{ p.safety_level }}</span>
+            </div>
+          </div>
+
+          <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.3rem;">
+            <span style="font-weight:600; color:#334155;">{{ p.category_display }}</span>
+            <span>•</span>
+            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px;">{{ p.address }}</span>
+          </div>
+
+          <!-- Quick Metrics Bar -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.4rem; background:#f8fafc; padding:0.45rem 0.65rem; border-radius:6px; font-size:0.6875rem; margin-bottom:0.65rem; border:1px solid #e2e8f0;">
+            <div>
+              <span style="color:#64748b;">🚔 PCR Vans:</span>
+              <b style="color:#0f172a; display:block;">{{ p.pcr_vans|length }} Active Patrols</b>
+            </div>
+            <div>
+              <span style="color:#64748b;">🛡️ Restricted:</span>
+              <b style="color:{% if p.restricted_zones %}#dc2626{% else %}#059669{% endif %}; display:block;">
+                {% if p.restricted_zones %}{{ p.restricted_zones|length }} Hazard Zones{% else %}None (Clear){% endif %}
+              </b>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:0.35rem;" onclick="event.stopPropagation()">
+            <button type="button" onclick="inspectPlaceSafety('{{ p.id|default:p.name }}', {{ p.latitude }}, {{ p.longitude }}, '{{ p.name|escapejs }}', '{{ p.city_code }}')" class="btn btn-primary btn-sm" style="font-size:0.75rem; padding:0.25rem 0.6rem; flex:1; justify-content:center;">
+              <span>🛡️</span> Safety Scorecard
+            </button>
+            <button type="button" onclick="window.placeSafetyExplorer.selectAndFocusPlace('{{ p.name|escapejs }}', {{ p.latitude }}, {{ p.longitude }}, document.getElementById('card-place-{{ p.id|default:forloop.counter }}'))" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.25rem 0.55rem;">
+              <span>📍</span> Focus Map
+            </button>
+            <a href="{% url 'maps:safe_routes' %}?dest={{ p.name|urlencode }}&dlat={{ p.latitude }}&dlng={{ p.longitude }}" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.25rem 0.55rem; text-decoration:none; background:#eff6ff; color:#1e40af; border-color:#bfdbfe;">
+              <span>🧭</span> Route
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Leaflet Map Canvas -->
+    <div class="explorer-map-wrapper">
+      
+      <!-- Basemap Switcher -->
+      <div class="map-style-float">
+        <button type="button" class="map-style-btn active" data-style="voyager">🗺️ Streets</button>
+        <button type="button" class="map-style-btn" data-style="satellite">🛰️ Satellite</button>
+        <button type="button" class="map-style-btn" data-style="dark">🌙 Dark</button>
+      </div>
+
+      <div id="place-safety-map"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Place Safety Scorecard Modal (Rich Intelligence Drawer) -->
+<div id="modal-place-scorecard" style="display:none; position:fixed; inset:0; background:rgba(15, 23, 42, 0.85); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:1rem;">
+  <div style="background:#ffffff; border-radius:12px; max-width:680px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); font-family:var(--font-body);">
+    
+    <!-- Modal Header -->
+    <div style="background:#0f172a; color:#ffffff; padding:1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:flex-start; border-top-left-radius:12px; border-top-right-radius:12px;">
+      <div>
+        <div style="font-size:0.6875rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;" id="modal-place-city">City Safety Intelligence</div>
+        <h2 style="font-size:1.35rem; font-weight:800; margin:0.25rem 0 0 0; color:#ffffff;" id="modal-place-title">Place Name</h2>
+      </div>
+      <button type="button" onclick="closePlaceModal()" style="background:transparent; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer; line-height:1;">✕</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding:1.5rem; display:flex; flex-direction:column; gap:1.25rem;">
+      
+      <!-- Primary Score Banner -->
+      <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Overall Safety Index</span>
+          <div style="font-size:2rem; font-weight:900; color:#059669;" id="modal-safety-score">96%</div>
+        </div>
+        <div style="text-align:right;">
+          <span class="badge badge-safe" id="modal-safety-level-badge" style="font-size:0.8125rem; padding:0.35rem 0.75rem;">MAXIMUM SECURITY</span>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:0.25rem;">24x7 Monitored Sector</div>
+        </div>
+      </div>
+
+      <!-- Safety Factors Matrix -->
+      <div>
+        <h4 style="font-size:0.875rem; font-weight:800; color:#0f172a; margin:0 0 0.6rem 0;">Sector Safety Parameters</h4>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.6rem;">
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.6rem 0.75rem;">
+            <div style="color:#64748b; font-size:0.6875rem;">💡 Illumination</div>
+            <b style="color:#0f172a; font-size:0.8125rem;" id="modal-lighting">Well-Lit Arterial</b>
+          </div>
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.6rem 0.75rem;">
+            <div style="color:#64748b; font-size:0.6875rem;">👮 Police Density</div>
+            <b style="color:#0f172a; font-size:0.8125rem;" id="modal-police-coverage">Continuous Patrol</b>
+          </div>
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.6rem 0.75rem;">
+            <div style="color:#64748b; font-size:0.6875rem;">👥 Crowd Density</div>
+            <b style="color:#0f172a; font-size:0.8125rem;" id="modal-crowd-level">Normal</b>
+          </div>
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.6rem 0.75rem;">
+            <div style="color:#64748b; font-size:0.6875rem;">📞 Control Room</div>
+            <b style="color:#1e40af; font-size:0.8125rem;" id="modal-emergency-phone">112 / 100</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active PCR Vans in Area -->
+      <div>
+        <h4 style="font-size:0.875rem; font-weight:800; color:#0f172a; margin:0 0 0.6rem 0;">🚔 Active PCR Patrol Vans Stationed in Area</h4>
+        <div id="modal-pcr-list" style="display:flex; flex-direction:column; gap:0.4rem;">
+          <div style="font-size:0.75rem; color:#64748b;">Loading active patrol units...</div>
+        </div>
+      </div>
+
+      <!-- Active Restricted Zones & Hazards -->
+      <div id="modal-restricted-section" style="display:none;">
+        <h4 style="font-size:0.875rem; font-weight:800; color:#dc2626; margin:0 0 0.6rem 0;">🛡️ Restricted Perimeters & Warning Zones</h4>
+        <div id="modal-restricted-list" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+      </div>
+
+      <!-- Active Incidents -->
+      <div id="modal-incidents-section" style="display:none;">
+        <h4 style="font-size:0.875rem; font-weight:800; color:#d97706; margin:0 0 0.6rem 0;">⚠️ Reported Incidents & Alerts</h4>
+        <div id="modal-incidents-list" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+      </div>
+
+      <!-- Emergency Medical POIs -->
+      <div>
+        <h4 style="font-size:0.875rem; font-weight:800; color:#0f172a; margin:0 0 0.6rem 0;">🏥 Nearby 24x7 Emergency Hospitals & Trauma Centers</h4>
+        <div id="modal-hospitals-list" style="display:flex; flex-direction:column; gap:0.4rem;">
+          <div style="font-size:0.75rem; color:#64748b;">Loading nearby emergency facilities...</div>
+        </div>
+      </div>
+
+      <!-- Safety Advisory Tips -->
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.75rem 1rem;">
+        <div style="font-size:0.75rem; font-weight:700; color:#1e40af; margin-bottom:0.25rem;">TOURIST SAFETY ADVISORY</div>
+        <p style="font-size:0.8125rem; color:#1e3a8a; margin:0;" id="modal-safety-advice">
+          Verified tourist zone with dedicated police coverage.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding:1rem 1.5rem; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+      <button type="button" onclick="closePlaceModal()" class="btn btn-secondary btn-sm">Close</button>
+      <a id="modal-btn-navigate" href="#" class="btn btn-primary btn-sm" style="text-decoration:none; font-weight:700;">
+        <span>🧭</span> Calculate Safe Route Here
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class PlaceSafetyExplorer {
+  constructor() {
+    this.map = null;
+    this.activeCity = 'ALL';
+    this.activeBaseStyle = 'voyager';
+    this.baseTiles = {};
+    this.allPlaces = [];
+    this.markersMap = {};
+    this.zonesLayer = null;
+    this.markersLayer = null;
+    this.focusHaloLayer = null;
+    this.selectedPlaceName = null;
+
+    this.cityCenters = {
+      MUMBAI: { center: [18.9400, 72.8300], zoom: 13, name: 'Mumbai', state: 'Maharashtra', pcr: '18 Active Patrols', police: '112 / 100', ems: '108', score: 89, level: 'VERY SAFE' },
+      DELHI: { center: [28.6139, 77.2090], zoom: 12, name: 'Delhi (NCR)', state: 'NCT', pcr: '24 Active Patrols', police: '112 / 100', ems: '102 / 108', score: 83, level: 'MONITORED' },
+      NOIDA: { center: [28.4744, 77.5040], zoom: 13, name: 'Noida & Greater Noida', state: 'Uttar Pradesh (NCR)', pcr: '16 Active Patrols', police: '112 / +91 120 232 0100', ems: '108', score: 90, level: 'VERY SAFE' },
+      JAIPUR: { center: [26.9200, 75.8200], zoom: 13, name: 'Jaipur', state: 'Rajasthan', pcr: '14 Active Patrols', police: '112 / +91 141 261 4444', ems: '108', score: 91, level: 'MAXIMUM SECURITY' },
+      AGRA: { center: [27.1800, 78.0200], zoom: 13, name: 'Agra', state: 'Uttar Pradesh', pcr: '16 Active Patrols', police: '112 / +91 562 222 6666', ems: '108', score: 88, level: 'HIGH SECURITY' },
+      ALL: { center: [23.5000, 77.5000], zoom: 5, name: 'National Tourist Safety Grid', score: 92, level: 'AVERAGE SAFETY INDEX', pcr: '100+ Patrol Vans', police: '112 / 100', ems: '108' }
+    };
+
+    this.init();
+  }
+
+  async init() {
+    this.initMap();
+    this.initFilterEvents();
+    this.initSearchInput();
+    await this.fetchPlacesData();
+    this.renderMapMarkers();
+  }
+
+  initMap() {
+    const mapEl = document.getElementById('place-safety-map');
+    if (!mapEl) return;
+
+    this.map = L.map('place-safety-map', {
+      center: [23.5000, 77.5000],
+      zoom: 5,
+      zoomControl: false
+    });
+
+    L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+
+    this.baseTiles = {
+      voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '&copy; Esri World Imagery'
+      }),
+      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: '&copy; CARTO Dark Matter'
+      })
+    };
+
+    this.baseTiles.voyager.addTo(this.map);
+
+    this.zonesLayer = L.layerGroup().addTo(this.map);
+    this.markersLayer = L.layerGroup().addTo(this.map);
+    this.focusHaloLayer = L.layerGroup().addTo(this.map);
+
+    setTimeout(() => {
+      if (this.map) this.map.invalidateSize();
+    }, 250);
+
+    window.addEventListener('resize', () => {
+      if (this.map) this.map.invalidateSize();
+    });
+  }
+
+  async fetchPlacesData() {
+    try {
+      const res = await fetch('/maps/api/places/');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        this.allPlaces = data.data;
+      }
+    } catch (e) {
+      console.warn('Places load error:', e);
+    }
+  }
+
+  initFilterEvents() {
+    // City Tab Buttons
+    document.querySelectorAll('.city-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.city-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        this.activeCity = btn.getAttribute('data-city') || 'ALL';
+        this.filterPlaces();
+        this.updateCityRibbon();
+        this.focusCityOnMap();
+      });
+    });
+
+    // Basemap Switcher
+    document.querySelectorAll('.map-style-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const style = btn.getAttribute('data-style');
+        if (!this.baseTiles[style]) return;
+
+        Object.values(this.baseTiles).forEach(t => this.map.removeLayer(t));
+        this.baseTiles[style].addTo(this.map);
+
+        document.querySelectorAll('.map-style-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.activeBaseStyle = style;
+      });
+    });
+  }
+
+  initSearchInput() {
+    const searchInput = document.getElementById('place-search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+
+    if (searchInput) {
+      const handleSearch = () => {
+        const q = searchInput.value.trim();
+        if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+        this.filterPlaces();
+
+        if (q.length >= 2) {
+          const matched = this.allPlaces.find(p => 
+            p.name.toLowerCase().includes(q.toLowerCase()) || 
+            p.city_name.toLowerCase().includes(q.toLowerCase())
+          );
+          if (matched) {
+            this.selectAndFocusPlace(matched.name, matched.latitude, matched.longitude, null);
+          }
+        }
+      };
+
+      searchInput.addEventListener('input', handleSearch);
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSearch();
+      });
+    }
+
+    if (clearBtn && searchInput) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+        this.filterPlaces();
+      });
+    }
+  }
+
+  filterPlaces() {
+    const q = (document.getElementById('place-search-input')?.value || '').toLowerCase().trim();
+    let visibleCount = 0;
+
+    document.querySelectorAll('.js-place-card').forEach(card => {
+      const cardCity = card.getAttribute('data-city') || '';
+      const cardName = card.getAttribute('data-name') || '';
+
+      const cityMatch = this.activeCity === 'ALL' || cardCity.toUpperCase() === this.activeCity.toUpperCase();
+      const queryMatch = !q || cardName.includes(q) || cardCity.toLowerCase().includes(q);
+
+      if (cityMatch && queryMatch) {
+        card.style.display = 'block';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    const countLabel = document.getElementById('places-count-label');
+    if (countLabel) {
+      countLabel.innerText = `Showing ${visibleCount} verified safety locations ${this.activeCity !== 'ALL' ? 'in ' + this.activeCity : 'across India'}`;
+    }
+
+    this.renderMapMarkers();
+  }
+
+  updateCityRibbon() {
+    const nameEl = document.getElementById('ribbon-city-name');
+    const badgeEl = document.getElementById('ribbon-city-badge');
+    const pcrEl = document.getElementById('ribbon-pcr-count');
+    const policeEl = document.getElementById('ribbon-police-phone');
+    const emsEl = document.getElementById('ribbon-ems-phone');
+
+    const meta = this.cityCenters[this.activeCity] || this.cityCenters.ALL;
+
+    if (nameEl) nameEl.innerText = meta.name + (meta.state ? ` (${meta.state})` : '');
+    if (badgeEl) {
+      badgeEl.innerText = `${meta.score}% — ${meta.level}`;
+      badgeEl.className = meta.score >= 90 ? 'badge badge-safe' : 'badge badge-warning';
+    }
+    if (pcrEl) pcrEl.innerText = meta.pcr;
+    if (policeEl) policeEl.innerText = meta.police;
+    if (emsEl) emsEl.innerText = meta.ems;
+  }
+
+  // --- 1. City Click Focus ---
+  focusCityOnMap() {
+    if (!this.map) return;
+    const meta = this.cityCenters[this.activeCity] || this.cityCenters.ALL;
+    this.focusHaloLayer.clearLayers();
+    this.map.flyTo(meta.center, meta.zoom, { duration: 1.0 });
+  }
+
+  // --- 2. Area / Place Card Click Focus ---
+  selectAndFocusPlace(placeName, lat, lng, cardElement = null) {
+    if (!this.map) return;
+
+    this.selectedPlaceName = placeName;
+
+    // Highlight card
+    document.querySelectorAll('.js-place-card').forEach(c => c.classList.remove('is-selected'));
+    if (cardElement) {
+      cardElement.classList.add('is-selected');
+      cardElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      const matchCard = Array.from(document.querySelectorAll('.js-place-card')).find(c => 
+        c.getAttribute('data-display-name') === placeName
+      );
+      if (matchCard) {
+        matchCard.classList.add('is-selected');
+        matchCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    // Smoothly Fly Map Directly to Area
+    this.map.flyTo([lat, lng], 16, { duration: 1.0 });
+
+    // Animated Target Halo
+    this.focusHaloLayer.clearLayers();
+    const haloIcon = L.divIcon({
+      className: 'area-focus-pulse',
+      html: `<div style="width:44px; height:44px;"></div>`,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22]
+    });
+    L.marker([lat, lng], { icon: haloIcon }).addTo(this.focusHaloLayer);
+
+    // Open Leaflet Popup
+    if (this.markersMap[placeName]) {
+      this.markersMap[placeName].openPopup();
+    }
+  }
+
+  renderMapMarkers() {
+    if (!this.map) return;
+    this.markersLayer.clearLayers();
+    this.zonesLayer.clearLayers();
+    this.markersMap = {};
+
+    const q = (document.getElementById('place-search-input')?.value || '').toLowerCase().trim();
+
+    this.allPlaces.forEach(p => {
+      const cityMatch = this.activeCity === 'ALL' || p.city_code.toUpperCase() === this.activeCity.toUpperCase();
+      const queryMatch = !q || p.name.toLowerCase().includes(q) || p.city_name.toLowerCase().includes(q);
+
+      if (cityMatch && queryMatch) {
+        const markerColor = p.safety_score >= 90 ? '#059669' : p.safety_score >= 80 ? '#0284c7' : '#d97706';
+
+        const pinIcon = L.divIcon({
+          className: 'custom-city-pin',
+          html: `
+            <div style="width:30px; height:30px; background:${markerColor}; border:2.5px solid #ffffff; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:800; font-size:13px; font-family:Inter,sans-serif; cursor:pointer;">
+              ${p.safety_score >= 90 ? '🛡️' : '📍'}
+            </div>
+          `,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+
+        const marker = L.marker([p.latitude, p.longitude], { icon: pinIcon }).addTo(this.markersLayer);
+        this.markersMap[p.name] = marker;
+
+        marker.on('click', () => {
+          this.selectAndFocusPlace(p.name, p.latitude, p.longitude, null);
+        });
+
+        const popupContent = `
+          <div style="font-family:Inter,sans-serif; font-size:12px; min-width:190px;">
+            <div style="font-weight:700; color:#64748b; font-size:10px; text-transform:uppercase;">${p.city_name} • ${p.category_display}</div>
+            <div style="font-weight:800; font-size:13px; color:#0f172a; margin:2px 0;">${p.name}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:4px 0;">
+              <span style="color:#059669; font-weight:800; font-size:13px;">${p.safety_score}% Safety Index</span>
+              <span style="font-size:11px; color:#64748b;">${p.pcr_vans ? p.pcr_vans.length : 0} PCR Patrols</span>
+            </div>
+            <div style="margin-top:6px; display:flex; gap:4px;">
+              <button onclick="inspectPlaceSafety('${p.id || p.name}', ${p.latitude}, ${p.longitude}, '${p.name.replace(/'/g, "\\'")}', '${p.city_code}')" style="background:#0f172a; color:#ffffff; border:none; border-radius:4px; padding:4px 6px; font-size:11px; font-weight:600; cursor:pointer; flex:1;">
+                View Safety
+              </button>
+              <a href="/maps/safe-routes/?dest=${encodeURIComponent(p.name)}&dlat=${p.latitude}&dlng=${p.longitude}" style="background:#0284c7; color:#ffffff; text-decoration:none; border-radius:4px; padding:4px 6px; font-size:11px; font-weight:600; text-align:center;">
+                Route 🧭
+              </a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+
+        // Render restricted zones
+        if (p.restricted_zones && p.restricted_zones.length > 0) {
+          p.restricted_zones.forEach(z => {
+            L.circle([p.latitude, p.longitude], {
+              radius: 400,
+              color: '#ef4444',
+              weight: 1.5,
+              fillColor: '#ef4444',
+              fillOpacity: 0.12,
+              dashArray: '4,4'
+            }).addTo(this.zonesLayer);
+          });
+        }
+      }
+    });
+  }
+}
+
+// Global Modal Functions
+async function inspectPlaceSafety(placeIdOrName, lat, lng, name, cityCode) {
+  const modal = document.getElementById('modal-place-scorecard');
+  if (!modal) return;
+
+  modal.style.display = 'flex';
+  document.getElementById('modal-place-title').innerText = name || 'Safety Scorecard';
+  document.getElementById('modal-place-city').innerText = `${cityCode || 'City'} Safety Intelligence`;
+
+  const navBtn = document.getElementById('modal-btn-navigate');
+  if (navBtn) {
+    navBtn.href = `/maps/safe-routes/?dest=${encodeURIComponent(name)}&dlat=${lat}&dlng=${lng}`;
+  }
+
+  try {
+    const res = await fetch(`/maps/api/places/safety-scorecard/?place=${encodeURIComponent(placeIdOrName)}&city=${cityCode}&lat=${lat}&lng=${lng}`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      renderScorecardModal(data.data);
+    }
+  } catch (err) {
+    console.error('Scorecard fetch error:', err);
+  }
+}
+
+function renderScorecardModal(scorecard) {
+  const scoreEl = document.getElementById('modal-safety-score');
+  if (scoreEl) scoreEl.innerText = `${scorecard.safety_score}%`;
+
+  const badgeEl = document.getElementById('modal-safety-level-badge');
+  if (badgeEl) {
+    badgeEl.innerText = scorecard.safety_level;
+    badgeEl.className = scorecard.safety_score >= 90 ? 'badge badge-safe' : 'badge badge-warning';
+  }
+
+  document.getElementById('modal-lighting').innerText = scorecard.lighting || 'Well-Lit Corridor';
+  document.getElementById('modal-police-coverage').innerText = scorecard.police_coverage || 'Active Mobile PCR';
+  document.getElementById('modal-crowd-level').innerText = scorecard.crowd_level || 'Monitored';
+  document.getElementById('modal-emergency-phone').innerText = scorecard.emergency_phone || '112';
+  document.getElementById('modal-safety-advice').innerText = scorecard.safety_tips || 'Verified safety sector.';
+
+  const pcrList = document.getElementById('modal-pcr-list');
+  if (pcrList) {
+    if (scorecard.active_pcr_vans && scorecard.active_pcr_vans.length > 0) {
+      pcrList.innerHTML = scorecard.active_pcr_vans.map(r => `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.5rem 0.75rem; display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span style="font-size:1.125rem;">🚔</span>
+            <div>
+              <div style="font-weight:700; color:#0f172a;">${r.callsign || r.unit_code}</div>
+              <div style="color:#64748b; font-size:0.6875rem;">Officer: ${r.officer || 'Patrol Unit'} • 📞 ${r.contact || '112'}</div>
+            </div>
+          </div>
+          <span class="badge badge-safe" style="font-size:0.6875rem;">${r.status || 'AVAILABLE'}</span>
+        </div>
+      `).join('');
+    } else {
+      pcrList.innerHTML = `<div style="font-size:0.75rem; color:#64748b; padding:0.4rem 0;">Direct 24x7 emergency response dispatched via Police Control (112).</div>`;
+    }
+  }
+
+  const restSection = document.getElementById('modal-restricted-section');
+  const restList = document.getElementById('modal-restricted-list');
+  if (restList) {
+    if (scorecard.restricted_zones && scorecard.restricted_zones.length > 0) {
+      restSection.style.display = 'block';
+      restList.innerHTML = scorecard.restricted_zones.map(z => `
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.75rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="color:#991b1b;">⚠️ ${z.name}</b>
+            <span class="badge badge-critical" style="font-size:0.625rem;">RESTRICTED</span>
+          </div>
+          <div style="color:#b91c1c; font-size:0.6875rem; margin-top:0.2rem;">${z.reason || z.safety_advisory || 'Caution advised'}</div>
+        </div>
+      `).join('');
+    } else {
+      restList.innerHTML = `<div style="font-size:0.75rem; color:#059669; padding:0.25rem 0;">✅ No active restricted zones in this sector. Clear tourist corridor.</div>`;
+    }
+  }
+
+  const incSection = document.getElementById('modal-incidents-section');
+  const incList = document.getElementById('modal-incidents-list');
+  if (incList) {
+    if (scorecard.active_incidents && scorecard.active_incidents.length > 0) {
+      incSection.style.display = 'block';
+      incList.innerHTML = scorecard.active_incidents.map(inc => `
+        <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.75rem;">
+          <b style="color:#92400e;">⚠️ ${inc.title}</b>
+          <div style="color:#b45309; font-size:0.6875rem;">${inc.advice || inc.category || 'General Safety Notice'}</div>
+        </div>
+      `).join('');
+    } else {
+      incList.innerHTML = `<div style="font-size:0.75rem; color:#059669; padding:0.25rem 0;">✅ Zero open threat incidents reported in this sector.</div>`;
+    }
+  }
+
+  const hospList = document.getElementById('modal-hospitals-list');
+  if (hospList) {
+    if (scorecard.nearby_hospitals && scorecard.nearby_hospitals.length > 0) {
+      hospList.innerHTML = scorecard.nearby_hospitals.map(h => `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.4rem 0.75rem; display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
+          <div>
+            <b style="color:#0f172a;">🏥 ${h.name}</b>
+            <div style="color:#64748b; font-size:0.6875rem;">${h.distance_km ? h.distance_km + ' km away • ' : ''}📞 ${h.phone || h.contact_number || '108'}</div>
+          </div>
+          <a href="tel:${h.phone || h.contact_number || '108'}" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.2rem 0.5rem;">Call 📞</a>
+        </div>
+      `).join('');
+    } else {
+      hospList.innerHTML = `<div style="font-size:0.75rem; color:#64748b;">Emergency ambulance dispatch available via 108.</div>`;
+    }
+  }
+}
+
+function closePlaceModal() {
+  const modal = document.getElementById('modal-place-scorecard');
+  if (modal) modal.style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.placeSafetyExplorer = new PlaceSafetyExplorer();
+});
+</script>
+{% endblock %}

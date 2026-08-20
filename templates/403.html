@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}403 Forbidden — Access Restricted — VIGIL{% endblock %}
+
+{% block content %}
+<div style="max-width: 520px; margin: 4rem auto; padding: 0 1rem; text-align: center;">
+  <div style="font-size: 3.5rem; margin-bottom: 1rem;">🚫</div>
+  <span class="badge badge-critical" style="margin-bottom: 0.5rem;">HTTP 403 — Unauthorized Access</span>
+  <h1 style="font-size: 1.75rem; font-weight: 700; color: #0f172a; margin-top: 0.5rem;">
+    Access Restricted by Security Policy
+  </h1>
+  <p style="font-size: 0.9375rem; color: #64748b; line-height: 1.5; margin: 1rem 0 1.5rem 0;">
+    {{ exception|default:"You do not have the required role-based authorization to access this public safety or administrative console." }}
+  </p>
+
+  <div style="display: flex; gap: 0.75rem; justify-content: center;">
+    {% if user.is_authenticated %}
+      {% if user.is_tourism_admin %}
+      <a href="{% url 'accounts:admin_portal' %}" class="btn btn-primary">Return to Admin Portal</a>
+      {% elif user.is_authority %}
+      <a href="{% url 'dashboard:c2_command' %}" class="btn btn-primary">Return to C2 Operations</a>
+      {% else %}
+      <a href="{% url 'tourists:home' %}" class="btn btn-primary">Return to Tourist Dashboard</a>
+      {% endif %}
+    {% else %}
+      <a href="{% url 'accounts:login' %}" class="btn btn-primary">Sign In with Authorized Account</a>
+    {% endif %}
+    <a href="{% url 'design_system' %}" class="btn btn-secondary">Platform Overview</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+<!-- Reusable Public Safety Footer Component -->
+<footer style="background-color: #ffffff; border-top: 1px solid var(--border-color); padding: 2rem 1.5rem; margin-top: auto;">
+  <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.8125rem; color: #64748b;">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <span style="font-weight: 700; color: #0f172a; font-family: var(--font-heading);">VIGIL SAFETY NETWORK</span>
+      <span>•</span>
+      <span>Smart India Hackathon (SIH 2026) Project</span>
+    </div>
+
+    <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
+      <a href="{% url 'incidents:incident_feed' %}" style="color: #64748b; text-decoration: none;">Incidents Feed</a>
+      <a href="{% url 'digital_id:verify_portal' %}" style="color: #64748b; text-decoration: none;">QR Verification</a>
+      <a href="{% url 'maps:safe_routes' %}" style="color: #64748b; text-decoration: none;">Safe Routes</a>
+      <a href="{% url 'demo:controller' %}" style="color: #2563eb; text-decoration: none; font-weight: 600;">🎬 Demo Flow</a>
+      <a href="{% url 'design_system' %}" style="color: #64748b; text-decoration: none;">Design System</a>
+    </div>
+
+    <div>
+      <span>National Tourism & Emergency Response Standard • v2.4</span>
+    </div>
+  </div>
+</footer>

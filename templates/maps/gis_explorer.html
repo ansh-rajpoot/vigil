@@ -1,0 +1,872 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Interactive Tourist GIS Safety Explorer — VIGIL{% endblock %}
+
+{% block extra_css %}
+<style>
+  .gis-wrapper {
+    max-width: 1440px;
+    margin: 0.5rem auto;
+    padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Top Control & Search Bar */
+  .gis-header-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .city-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+  }
+
+  .city-chip-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+  }
+
+  .city-chip-btn.active {
+    background: #1e3a8a;
+    color: #ffffff;
+    border-color: #1e3a8a;
+    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+    font-weight: 700;
+  }
+
+  /* Main Map Canvas Area */
+  .gis-canvas-container {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 175px);
+    min-height: 600px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  #gis-explorer-map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: #e2e8f0;
+  }
+
+  /* Floating Modern Basemap Switcher */
+  .gis-basemap-switcher {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    display: flex;
+    gap: 0.25rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    padding: 0.25rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  }
+
+  .basemap-btn {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #475569;
+    background: transparent;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .basemap-btn.active {
+    background: #0f172a;
+    color: #ffffff;
+  }
+
+  /* Floating Layer Controls */
+  .gis-layer-pills {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    max-width: calc(100% - 380px);
+  }
+
+  .layer-pill {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 0.25rem 0.55rem;
+    border-radius: 5px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+  }
+
+  .layer-pill.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+  }
+
+  /* Status Banner for User GPS */
+  .gps-status-indicator {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 1.25rem;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(8px);
+    color: #ffffff;
+    border-radius: 20px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .gps-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: gpsBlink 1.5s infinite;
+  }
+
+  @keyframes gpsBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* Floating Place Snapshot Overlay Card */
+  .gis-snapshot-card {
+    position: absolute;
+    bottom: 3.5rem;
+    left: 1.25rem;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
+    max-width: 380px;
+    width: calc(100% - 2.5rem);
+    display: none;
+    font-family: var(--font-body);
+    animation: slideUpCard 0.25s ease-out;
+  }
+
+  @keyframes slideUpCard {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Search Highlight Marker Pulse Animation */
+  .search-target-halo {
+    border: 3px solid #0284c7;
+    border-radius: 50%;
+    background: rgba(2, 132, 199, 0.25);
+    animation: searchPulse 1.8s infinite;
+  }
+
+  @keyframes searchPulse {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gis-wrapper">
+
+  <!-- Top Search & City Filter Bar -->
+  <div class="gis-header-card">
+    <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;" id="gis-city-chips">
+      <span style="font-size:0.75rem; font-weight:700; color:#64748b; margin-right:0.25rem;">TOURIST CITIES:</span>
+      <button type="button" class="city-chip-btn" data-city="ALL">🌐 All 5 Cities</button>
+      <button type="button" class="city-chip-btn" data-city="MUMBAI">🏙️ Mumbai</button>
+      <button type="button" class="city-chip-btn" data-city="DELHI">🏛️ Delhi</button>
+      <button type="button" class="city-chip-btn" data-city="NOIDA">🏢 Noida</button>
+      <button type="button" class="city-chip-btn" data-city="JAIPUR">🏰 Jaipur</button>
+      <button type="button" class="city-chip-btn" data-city="AGRA">🕌 Agra</button>
+    </div>
+
+    <!-- Live Search Input with Instant Autocomplete -->
+    <div style="position:relative; flex:1; min-width:280px; max-width:440px; display:flex; align-items:center;">
+      <input type="text" id="gis-place-search" class="form-input" list="places-list" placeholder="🔍 Search place (e.g. Gateway of India, Taj Mahal, India Gate, Hawa Mahal)..." style="font-size:0.8125rem; padding:0.45rem 2rem 0.45rem 0.75rem; width:100%; border-radius:8px;">
+      <button type="button" id="clear-search-btn" style="position:absolute; right:8px; background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; display:none;">✕</button>
+      <datalist id="places-list">
+        {% for p in places %}
+        <option value="{{ p.name }}">{{ p.city_name }} • {{ p.category_display }}</option>
+        {% endfor %}
+      </datalist>
+    </div>
+
+    <div style="display:flex; gap:0.4rem; align-items:center;">
+      <button type="button" id="btn-recenter-user" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:0.4rem 0.75rem; font-weight:700;">
+        <span>📍</span> Focus My Location
+      </button>
+      <a href="{% url 'maps:safe_routes' %}" class="btn btn-primary btn-sm" style="font-size:0.75rem; padding:0.4rem 0.75rem;">
+        <span>🧭</span> Safe Routes
+      </a>
+    </div>
+  </div>
+
+  <!-- Map Canvas Viewport -->
+  <div class="gis-canvas-container">
+
+    <!-- Layer Toggles -->
+    <div class="gis-layer-pills">
+      <div class="layer-pill active" data-layer="places">📍 Places (<span id="count-places">0</span>)</div>
+      <div class="layer-pill active" data-layer="pcr">🚔 PCR Patrols (<span id="count-pcr">0</span>)</div>
+      <div class="layer-pill active" data-layer="geozones">🛡️ Restricted Zones (<span id="count-zones">0</span>)</div>
+      <div class="layer-pill active" data-layer="incidents">⚠️ Incidents (<span id="count-incidents">0</span>)</div>
+      <div class="layer-pill active" data-layer="police">👮 Police</div>
+      <div class="layer-pill active" data-layer="hospitals">🏥 Hospitals</div>
+      <div class="layer-pill active" data-layer="blackspots">⚠️ Blackspots</div>
+    </div>
+
+    <!-- Modern Multi-Basemap Switcher -->
+    <div class="gis-basemap-switcher">
+      <button type="button" class="basemap-btn active" data-style="voyager">🗺️ Streets</button>
+      <button type="button" class="basemap-btn" data-style="satellite">🛰️ Satellite</button>
+      <button type="button" class="basemap-btn" data-style="dark">🌙 Dark</button>
+      <button type="button" class="basemap-btn" data-style="light">☀️ Minimal</button>
+    </div>
+
+    <!-- Leaflet Map Canvas -->
+    <div id="gis-explorer-map"></div>
+
+    <!-- GPS Status Pill Indicator -->
+    <div id="gps-status-bar" class="gps-status-indicator">
+      <div class="gps-pulse-dot" id="gps-dot"></div>
+      <span id="gps-status-text">Acquiring GPS location...</span>
+    </div>
+
+    <!-- Floating Place Snapshot Overlay -->
+    <div id="gis-snapshot-overlay" class="gis-snapshot-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.4rem;">
+        <div>
+          <span id="snap-city-tag" class="badge badge-secondary" style="font-size:0.625rem;">City</span>
+          <h3 id="snap-title" style="font-size:1.05rem; font-weight:800; color:#0f172a; margin:0.2rem 0 0 0;">Place Name</h3>
+        </div>
+        <div style="text-align:right;">
+          <div id="snap-score" style="font-size:1.35rem; font-weight:800; color:#059669;">95%</div>
+          <span id="snap-level" style="font-size:0.625rem; font-weight:700; color:#64748b; text-transform:uppercase;">VERY SAFE</span>
+        </div>
+      </div>
+
+      <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.5rem;" id="snap-address">
+        Location Address
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.4rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem 0.75rem; font-size:0.6875rem; margin-bottom:0.75rem;">
+        <div>
+          <span style="color:#64748b;">🚔 Nearby Patrols:</span>
+          <b id="snap-pcr" style="color:#0f172a; display:block;">Active Units</b>
+        </div>
+        <div>
+          <span style="color:#64748b;">🛡️ Restricted:</span>
+          <b id="snap-zones" style="color:#059669; display:block;">None (Clear)</b>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.4rem;">
+        <button type="button" onclick="document.getElementById('gis-snapshot-overlay').style.display='none'" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.35rem 0.6rem;">
+          Close
+        </button>
+        <a id="snap-route-link" href="#" class="btn btn-primary btn-sm" style="flex:1; justify-content:center; font-size:0.75rem; padding:0.35rem 0.6rem; text-decoration:none; font-weight:700;">
+          <span>🧭</span> Calculate Safe Route Here
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class TouristGISExplorer {
+  constructor() {
+    this.map = null;
+    this.activeCity = 'ALL';
+    this.activeBaseStyle = 'voyager';
+    this.baseTiles = {};
+    this.gisData = null;
+    this.layers = {};
+    this.allPlaces = [];
+    this.userCoords = null;
+    this.searchTargetMarker = null;
+
+    // Server-provided initial coords (from profile or URL query)
+    this.initialServerLat = {% if tourist_lat %}{{ tourist_lat }}{% else %}null{% endif %};
+    this.initialServerLng = {% if tourist_lng %}{{ tourist_lng }}{% else %}null{% endif %};
+
+    this.cityCenters = {
+      MUMBAI: { center: [18.9400, 72.8300], zoom: 13, name: 'Mumbai' },
+      DELHI: { center: [28.6139, 77.2090], zoom: 12, name: 'Delhi (NCR)' },
+      NOIDA: { center: [28.4744, 77.5040], zoom: 13, name: 'Noida & Greater Noida' },
+      JAIPUR: { center: [26.9200, 75.8200], zoom: 13, name: 'Jaipur' },
+      AGRA: { center: [27.1800, 78.0200], zoom: 13, name: 'Agra' },
+      ALL: { center: [24.5000, 77.0000], zoom: 5, name: 'All 5 Cities' }
+    };
+
+    this.init();
+  }
+
+  async init() {
+    this.initMap();
+    this.initEvents();
+    await this.fetchGISLayers();
+    this.renderAllLayers();
+
+    // 1. Initial Focus: Tourist Location Priority
+    this.acquireAndFocusTouristLocation();
+  }
+
+  initMap() {
+    const mapEl = document.getElementById('gis-explorer-map');
+    if (!mapEl) return;
+
+    // Default start coords (All-India or Tourist profile)
+    let startCenter = [24.5000, 77.0000];
+    let startZoom = 5;
+
+    if (this.initialServerLat && this.initialServerLng) {
+      startCenter = [this.initialServerLat, this.initialServerLng];
+      startZoom = 14;
+    }
+
+    this.map = L.map('gis-explorer-map', {
+      center: startCenter,
+      zoom: startZoom,
+      zoomControl: false
+    });
+
+    L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+
+    // Multi-Base Map Providers
+    this.baseTiles = {
+      voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '&copy; Esri World Imagery'
+      }),
+      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: '&copy; CARTO Dark Matter'
+      }),
+      light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        subdomains: 'abcd',
+        attribution: '&copy; CARTO Positron'
+      })
+    };
+
+    // Add default modern Voyager layer
+    this.baseTiles.voyager.addTo(this.map);
+
+    // Layer Groups
+    this.layers = {
+      places: L.layerGroup().addTo(this.map),
+      pcr: L.layerGroup().addTo(this.map),
+      geozones: L.layerGroup().addTo(this.map),
+      incidents: L.layerGroup().addTo(this.map),
+      police: L.layerGroup().addTo(this.map),
+      hospitals: L.layerGroup().addTo(this.map),
+      blackspots: L.layerGroup().addTo(this.map),
+      myLocation: L.layerGroup().addTo(this.map),
+      searchTarget: L.layerGroup().addTo(this.map)
+    };
+
+    setTimeout(() => {
+      if (this.map) this.map.invalidateSize();
+    }, 250);
+
+    window.addEventListener('resize', () => {
+      if (this.map) this.map.invalidateSize();
+    });
+  }
+
+  initEvents() {
+    // Basemap Switcher Buttons
+    document.querySelectorAll('.basemap-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const style = btn.getAttribute('data-style');
+        if (!this.baseTiles[style]) return;
+
+        // Remove active basemap layer
+        Object.values(this.baseTiles).forEach(t => this.map.removeLayer(t));
+        this.baseTiles[style].addTo(this.map);
+
+        document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.activeBaseStyle = style;
+      });
+    });
+
+    // City Filter Switcher Buttons
+    document.querySelectorAll('.city-chip-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.city-chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        this.activeCity = btn.getAttribute('data-city') || 'ALL';
+        this.filterByCity();
+      });
+    });
+
+    // Place Search Input & Autocomplete with Immediate Focus
+    const searchInput = document.getElementById('gis-place-search');
+    const clearBtn = document.getElementById('clear-search-btn');
+
+    if (searchInput) {
+      const handleSearch = () => {
+        const query = searchInput.value.trim();
+        if (!query) {
+          if (clearBtn) clearBtn.style.display = 'none';
+          return;
+        }
+        if (clearBtn) clearBtn.style.display = 'block';
+
+        const found = this.allPlaces.find(p => 
+          p.name.toLowerCase() === query.toLowerCase() || 
+          p.name.toLowerCase().includes(query.toLowerCase())
+        );
+
+        if (found) {
+          this.focusAndHighlightLocation(found.latitude, found.longitude, found);
+        }
+      };
+
+      searchInput.addEventListener('input', handleSearch);
+      searchInput.addEventListener('change', handleSearch);
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSearch();
+      });
+    }
+
+    if (clearBtn && searchInput) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+        this.layers.searchTarget.clearLayers();
+        document.getElementById('gis-snapshot-overlay').style.display = 'none';
+      });
+    }
+
+    // Recenter on User GPS Button
+    const recenterBtn = document.getElementById('btn-recenter-user');
+    if (recenterBtn) {
+      recenterBtn.addEventListener('click', () => {
+        this.acquireAndFocusTouristLocation(true);
+      });
+    }
+
+    // Layer Pill Toggles
+    document.querySelectorAll('.layer-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const layerKey = pill.getAttribute('data-layer');
+        if (!this.layers[layerKey]) return;
+
+        if (this.map.hasLayer(this.layers[layerKey])) {
+          this.map.removeLayer(this.layers[layerKey]);
+          pill.classList.remove('active');
+        } else {
+          this.map.addLayer(this.layers[layerKey]);
+          pill.classList.add('active');
+        }
+      });
+    });
+  }
+
+  // --- 1. Tourist Location Acquisition & Initial Focus ---
+  acquireAndFocusTouristLocation(forceFly = false) {
+    const statusText = document.getElementById('gps-status-text');
+    const statusDot = document.getElementById('gps-dot');
+
+    if (this.initialServerLat && this.initialServerLng && !forceFly) {
+      this.drawUserMarker(this.initialServerLat, this.initialServerLng, 100);
+      if (statusText) statusText.innerText = `Tourist Profile: ${this.initialServerLat.toFixed(4)}°, ${this.initialServerLng.toFixed(4)}°`;
+    }
+
+    if (!navigator.geolocation) {
+      if (statusText) statusText.innerText = 'GPS not supported by browser';
+      return;
+    }
+
+    if (statusText) statusText.innerText = 'Acquiring high-accuracy GPS...';
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const acc = pos.coords.accuracy || 25;
+        this.userCoords = { lat, lng, accuracy: acc };
+
+        this.drawUserMarker(lat, lng, acc);
+
+        if (statusText) statusText.innerText = `GPS Active (±${Math.round(acc)}m) ✓`;
+        if (statusDot) statusDot.style.background = '#10b981';
+
+        // Focus map immediately on user's live position
+        this.map.flyTo([lat, lng], 15, { duration: 1.2 });
+      },
+      (err) => {
+        console.warn('Geolocation acquisition:', err.message);
+        if (statusText) {
+          if (this.initialServerLat) {
+            statusText.innerText = `Profile Loc: ${this.initialServerLat.toFixed(3)}°, ${this.initialServerLng.toFixed(3)}°`;
+          } else {
+            statusText.innerText = 'GPS unavailable — Select city above';
+            if (statusDot) statusDot.style.background = '#f59e0b';
+          }
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+    );
+  }
+
+  drawUserMarker(lat, lng, accuracy) {
+    this.layers.myLocation.clearLayers();
+
+    // Accuracy halo circle
+    L.circle([lat, lng], {
+      radius: Math.min(accuracy, 200),
+      color: '#0284c7',
+      fillColor: '#38bdf8',
+      fillOpacity: 0.15,
+      weight: 1.5,
+      dashArray: '3, 3'
+    }).addTo(this.layers.myLocation);
+
+    // Glowing User Location Marker
+    const myIcon = L.divIcon({
+      className: 'gis-user-pin',
+      html: `
+        <div style="position:relative; width:32px; height:32px; display:flex; align-items:center; justify-content:center;">
+          <div style="position:absolute; width:100%; height:100%; border-radius:50%; background:rgba(2,132,199,0.4); animation:searchPulse 1.6s infinite;"></div>
+          <div style="width:16px; height:16px; background:#0284c7; border:3px solid #ffffff; border-radius:50%; box-shadow:0 0 10px rgba(2,132,199,0.8); z-index:2;"></div>
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    L.marker([lat, lng], { icon: myIcon, zIndexOffset: 1000 })
+      .bindPopup(`
+        <div style="font-family:Inter,sans-serif; text-align:center;">
+          <div style="font-size:10px; font-weight:700; color:#0284c7; text-transform:uppercase;">CURRENT POSITION</div>
+          <div style="font-size:13px; font-weight:800; color:#0f172a; margin:2px 0;">You Are Here 📍</div>
+          <div style="font-size:11px; color:#64748b;">${lat.toFixed(5)}°, ${lng.toFixed(5)}° (±${Math.round(accuracy)}m)</div>
+        </div>
+      `)
+      .addTo(this.layers.myLocation);
+  }
+
+  // --- 2. Focus & Highlight Searched Location ---
+  focusAndHighlightLocation(lat, lng, placeData = null) {
+    if (!this.map) return;
+
+    // Smooth cinematic zoom to searched location
+    this.map.flyTo([lat, lng], 16, { duration: 1.0 });
+
+    // Render expanding target highlight animation
+    this.layers.searchTarget.clearLayers();
+    const targetHalo = L.divIcon({
+      className: 'search-target-halo',
+      html: `<div style="width:40px; height:40px;"></div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 20]
+    });
+    L.marker([lat, lng], { icon: targetHalo }).addTo(this.layers.searchTarget);
+
+    // If place metadata is present, open scorecard card
+    if (placeData) {
+      this.showPlaceSnapshot(placeData);
+    }
+  }
+
+  async fetchGISLayers() {
+    try {
+      const res = await fetch('/maps/api/gis-layers/');
+      const data = await res.json();
+      if (data.success && data.data) {
+        this.gisData = data.data;
+        this.allPlaces = data.data.places || [];
+      }
+    } catch (e) {
+      console.error('Failed to load GIS layers:', e);
+    }
+  }
+
+  renderAllLayers() {
+    if (!this.gisData) return;
+
+    Object.keys(this.layers).forEach(k => {
+      if (k !== 'myLocation' && k !== 'searchTarget') {
+        this.layers[k].clearLayers();
+      }
+    });
+
+    const d = this.gisData;
+    let placeCount = 0;
+    let pcrCount = 0;
+    let zoneCount = 0;
+    let incidentCount = 0;
+
+    // 1. Tourist Places
+    if (d.places) {
+      d.places.forEach(p => {
+        if (this.activeCity === 'ALL' || p.city_code === this.activeCity) {
+          placeCount++;
+          const markerColor = p.safety_score >= 90 ? '#059669' : p.safety_score >= 80 ? '#0284c7' : '#d97706';
+
+          const icon = L.divIcon({
+            className: 'gis-place-pin',
+            html: `
+              <div style="width:30px; height:30px; background:${markerColor}; border:2.5px solid #ffffff; border-radius:50%; box-shadow:0 3px 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:800; font-size:13px; cursor:pointer;">
+                ${p.safety_score >= 90 ? '🛡️' : '📍'}
+              </div>
+            `,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+          });
+
+          const marker = L.marker([p.latitude, p.longitude], { icon: icon }).addTo(this.layers.places);
+
+          marker.on('click', () => {
+            this.focusAndHighlightLocation(p.latitude, p.longitude, p);
+          });
+
+          marker.bindPopup(`
+            <div style="font-family:Inter,sans-serif; min-width:200px;">
+              <div style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase;">${p.city_name} • ${p.category_display}</div>
+              <div style="font-size:13px; font-weight:800; color:#0f172a; margin:2px 0 4px 0;">${p.name}</div>
+              <div style="font-size:12px; color:#059669; font-weight:700; margin-bottom:6px;">${p.safety_score}% Safety Index (${p.safety_level})</div>
+              <div style="display:flex; gap:4px;">
+                <button onclick="window.gisExplorer.focusAndHighlightLocation(${p.latitude}, ${p.longitude}, window.gisExplorer.allPlaces.find(x => x.name === '${p.name.replace(/'/g, "\\'")}'))" style="background:#0f172a; color:#ffffff; border:none; border-radius:4px; padding:4px 6px; font-size:11px; font-weight:600; cursor:pointer; flex:1;">
+                  Safety Details
+                </button>
+                <a href="/maps/safe-routes/?dest=${encodeURIComponent(p.name)}&dlat=${p.latitude}&dlng=${p.longitude}" style="background:#0284c7; color:#ffffff; text-decoration:none; border-radius:4px; padding:4px 6px; font-size:11px; font-weight:600; text-align:center;">
+                  Route 🧭
+                </a>
+              </div>
+            </div>
+          `);
+        }
+      });
+    }
+
+    // 2. PCR Responders
+    if (d.responders) {
+      d.responders.forEach(r => {
+        pcrCount++;
+        const pcrIcon = L.divIcon({
+          className: 'gis-pcr-pin',
+          html: `
+            <div style="width:28px; height:28px; background:#1e3a8a; border:2px solid #ffffff; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; font-size:13px;">
+              🚔
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        L.marker([r.latitude, r.longitude], { icon: pcrIcon })
+          .bindPopup(`
+            <div style="font-family:Inter,sans-serif; min-width:180px;">
+              <div style="font-size:10px; font-weight:700; color:#1e3a8a; text-transform:uppercase;">${r.agency || 'POLICE PCR'}</div>
+              <div style="font-size:13px; font-weight:800; color:#0f172a; margin:2px 0;">${r.callsign || r.unit_code}</div>
+              <div style="font-size:11px; color:#475569;">Officer: ${r.officer_in_charge || 'Duty Officer'}</div>
+              <div style="font-size:11px; color:#0f172a; font-weight:600; margin:3px 0;">📞 ${r.contact_number || '112'}</div>
+              <span class="badge badge-safe" style="font-size:10px;">${r.status_display || r.status || 'AVAILABLE'}</span>
+            </div>
+          `)
+          .addTo(this.layers.pcr);
+      });
+    }
+
+    // 3. Geofence Zones
+    if (d.geozones) {
+      d.geozones.forEach(z => {
+        zoneCount++;
+        if (z.polygon_geojson) {
+          const color = z.zone_type === 'SAFE_HAVEN' ? '#059669' : '#dc2626';
+          L.geoJSON(z.polygon_geojson, {
+            style: {
+              color: color,
+              weight: 2,
+              fillColor: color,
+              fillOpacity: 0.14,
+              dashArray: z.zone_type === 'SAFE_HAVEN' ? null : '4, 4'
+            }
+          }).bindPopup(`
+            <div style="font-family:Inter,sans-serif; min-width:190px;">
+              <div style="font-size:10px; font-weight:700; color:${color}; text-transform:uppercase;">GEOFENCE: ${z.zone_type_display || z.zone_type}</div>
+              <div style="font-size:13px; font-weight:800; color:#0f172a; margin:2px 0 4px 0;">${z.name}</div>
+              <div style="font-size:11px; color:#64748b; line-height:1.3;">${z.safety_advisory || z.description || ''}</div>
+            </div>
+          `).addTo(this.layers.geozones);
+        }
+      });
+    }
+
+    // 4. Incidents
+    if (d.incidents) {
+      d.incidents.forEach(inc => {
+        incidentCount++;
+        const incIcon = L.divIcon({
+          className: 'gis-inc-pin',
+          html: `<div style="width:26px; height:26px; background:#d97706; border:2px solid #ffffff; border-radius:50%; box-shadow:0 3px 6px rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:center; font-size:12px;">⚠️</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        });
+
+        L.marker([inc.latitude, inc.longitude], { icon: incIcon })
+          .bindPopup(`
+            <div style="font-family:Inter,sans-serif; min-width:180px;">
+              <div style="font-size:10px; font-weight:700; color:#d97706; text-transform:uppercase;">INCIDENT: ${inc.category}</div>
+              <div style="font-size:13px; font-weight:800; color:#0f172a; margin:2px 0;">${inc.title}</div>
+              <div style="font-size:11px; color:#64748b;">${inc.location_name || ''}</div>
+            </div>
+          `)
+          .addTo(this.layers.incidents);
+      });
+    }
+
+    // 5. Police Stations
+    if (d.police_stations) {
+      d.police_stations.forEach(p => {
+        const polIcon = L.divIcon({
+          className: 'gis-pol-pin',
+          html: `<div style="width:24px; height:24px; background:#1e40af; border:1.5px solid #ffffff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:#ffffff;">👮</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+        L.marker([p.latitude, p.longitude], { icon: polIcon })
+          .bindPopup(`<b>👮 ${p.name}</b><br><span style="font-size:11px;">📞 ${p.contact_number || '112'}</span>`)
+          .addTo(this.layers.police);
+      });
+    }
+
+    // 6. Hospitals
+    if (d.hospitals) {
+      d.hospitals.forEach(h => {
+        const hospIcon = L.divIcon({
+          className: 'gis-hosp-pin',
+          html: `<div style="width:24px; height:24px; background:#10b981; border:1.5px solid #ffffff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:#ffffff;">🏥</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+        L.marker([h.latitude, h.longitude], { icon: hospIcon })
+          .bindPopup(`<b>🏥 ${h.name}</b><br><span style="font-size:11px;">📞 ${h.contact_number || '108'}</span>`)
+          .addTo(this.layers.hospitals);
+      });
+    }
+
+    // 7. Blackspots
+    if (d.blackspots) {
+      d.blackspots.forEach(b => {
+        L.circle([b.latitude, b.longitude], {
+          radius: b.radius_meters || 300,
+          color: '#ea580c',
+          weight: 1.5,
+          fillColor: '#ea580c',
+          fillOpacity: 0.15,
+          dashArray: '4,4'
+        }).bindPopup(`<b>⚠️ Blackspot: ${b.name}</b><br><span style="font-size:11px;">${b.safety_advice || ''}</span>`)
+          .addTo(this.layers.blackspots);
+      });
+    }
+
+    // Update Counts
+    document.getElementById('count-places').innerText = placeCount;
+    document.getElementById('count-pcr').innerText = pcrCount;
+    document.getElementById('count-zones').innerText = zoneCount;
+    document.getElementById('count-incidents').innerText = incidentCount;
+  }
+
+  filterByCity() {
+    this.renderAllLayers();
+    const cityConfig = this.cityCenters[this.activeCity] || this.cityCenters.ALL;
+    if (this.map && cityConfig) {
+      this.map.flyTo(cityConfig.center, cityConfig.zoom, { duration: 1.0 });
+    }
+  }
+
+  showPlaceSnapshot(p) {
+    const card = document.getElementById('gis-snapshot-overlay');
+    if (!card) return;
+
+    card.style.display = 'block';
+    document.getElementById('snap-city-tag').innerText = p.city_name || p.city_code;
+    document.getElementById('snap-title').innerText = p.name;
+    document.getElementById('snap-score').innerText = `${p.safety_score}%`;
+    document.getElementById('snap-level').innerText = p.safety_level || 'SAFE';
+    document.getElementById('snap-address').innerText = p.address || `${p.latitude.toFixed(4)}°, ${p.longitude.toFixed(4)}°`;
+    document.getElementById('snap-pcr').innerText = p.pcr_vans ? `${p.pcr_vans.length} Patrol Units` : 'Active Patrols';
+    document.getElementById('snap-zones').innerText = (p.restricted_zones && p.restricted_zones.length > 0) ? `${p.restricted_zones.length} Hazard Zones` : 'None (Clear)';
+
+    const routeLink = document.getElementById('snap-route-link');
+    if (routeLink) {
+      routeLink.href = `/maps/safe-routes/?dest=${encodeURIComponent(p.name)}&dlat=${p.latitude}&dlng=${p.longitude}`;
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.gisExplorer = new TouristGISExplorer();
+});
+</script>
+{% endblock %}

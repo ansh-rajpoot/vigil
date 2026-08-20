@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}VIGIL C2 — Command & Control Operations Center{% endblock %}</title>
+
+  <!-- GovTech Design System & C2 Tactical Theme -->
+  <link rel="stylesheet" href="{% static 'css/design_system.css' %}">
+  <link rel="stylesheet" href="{% static 'css/c2_dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/leaflet_custom.css' %}">
+
+  <!-- Leaflet GIS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="c2-app-container">
+
+  <!-- C2 Top Header Bar -->
+  <header class="c2-header">
+    <div class="c2-brand-block">
+      <div style="font-size:1.25rem;">🛡️</div>
+      <div>
+        <div class="c2-brand-logo">VIGIL COMMAND & CONTROL</div>
+        <div style="font-size:0.6875rem; color:#94a3b8;">TOURISM POLICE & EMERGENCY OPERATIONS</div>
+      </div>
+      <span class="c2-ops-badge">GOA SECTOR</span>
+    </div>
+
+    <!-- Live Telemetry HUD -->
+    <div class="c2-telemetry-hud">
+      <div class="hud-stat-item">
+        <span>Active SOS:</span>
+        <span class="hud-stat-num critical" id="hud-sos-count">{{ active_sos_count|default:"0" }}</span>
+      </div>
+      <div class="hud-stat-item">
+        <span>Open Incidents:</span>
+        <span class="hud-stat-num warning" id="hud-incident-count">{{ open_incidents_count|default:"0" }}</span>
+      </div>
+      <div class="hud-stat-item">
+        <span>Units:</span>
+        <span class="hud-stat-num safe">{{ available_responders_count|default:"0" }}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; color:#94a3b8;">
+        <div id="c2-ws-status-dot" style="width:7px; height:7px; border-radius:50%; background:#10b981;"></div>
+        <span>LIVE</span>
+      </div>
+    </div>
+
+    <!-- Mobile Header Toggle Button -->
+    <button class="c2-mobile-toggle" id="c2-mobile-toggle" aria-label="Toggle C2 menu" onclick="toggleC2Nav()">
+      <span style="color:#f8fafc; font-size:1.125rem;">☰</span>
+    </button>
+
+    <!-- Navigation & User Controls -->
+    <div class="c2-user-controls" id="c2-user-controls-menu">
+      <a href="{% url 'dashboard:c2_command' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'c2_command' %}active{% endif %}">🗺️ Tactical Map</a>
+      <a href="{% url 'emergency:fleet_manager' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'fleet_manager' %}active{% endif %}">🚔 PCR Fleet</a>
+      <a href="{% url 'incidents:c2_list' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'c2_list' %}active{% endif %}">⚠️ Incidents</a>
+      <a href="{% url 'dashboard:analytics_dashboard' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'analytics_dashboard' %}active{% endif %}">📊 Analytics</a>
+      <a href="{% url 'geofencing:manager' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'manager' %}active{% endif %}">🛡️ Geofences</a>
+      <a href="{% url 'ai_services:crowd_ai_c2' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'crowd_ai_c2' %}active{% endif %}">📹 CCTV Feeds</a>
+      <a href="{% url 'alerts:broadcast_c2' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'broadcast_c2' %}active{% endif %}">📢 Broadcast</a>
+      <a href="{% url 'digital_id:verify_portal' %}" class="c2-nav-btn {% if request.resolver_match.url_name == 'verify_portal' %}active{% endif %}">🪪 QR Scanner</a>
+      <a href="{% url 'tourists:home' %}" class="c2-nav-btn" style="color:#38bdf8;">Tourist View ↗</a>
+      <a href="{% url 'accounts:logout' %}" class="c2-nav-btn is-logout">Exit C2</a>
+    </div>
+  </header>
+
+  <script>
+  function toggleC2Nav() {
+    const menu = document.getElementById('c2-user-controls-menu');
+    if (menu) menu.classList.toggle('is-open');
+  }
+  </script>
+
+  <!-- Main C2 Workspace -->
+  {% block content %}{% endblock %}
+
+  <!-- Leaflet GIS JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

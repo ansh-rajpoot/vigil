@@ -1,0 +1,437 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIGIL — SIH Controlled Demonstration Director</title>
+
+  <!-- GovTech Design System CSS -->
+  <link rel="stylesheet" href="{% static 'css/design_system.css' %}">
+
+  <style>
+    body {
+      background: #090d16;
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .demo-header {
+      background: #0f172a;
+      border-bottom: 1px solid #24324d;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .demo-badge-pill {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid #0284c7;
+      color: #38bdf8;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .demo-container {
+      max-width: 1300px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .step-card {
+      background: #0f172a;
+      border: 1px solid #24324d;
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .step-card:hover {
+      border-color: #38bdf8;
+      transform: translateY(-2px);
+    }
+    .step-card.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+    }
+    .step-card.completed {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.04);
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #1e293b;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: 1px solid #334155;
+    }
+    .step-card.completed .step-num {
+      background: #10b981;
+      color: #ffffff;
+      border-color: #10b981;
+    }
+    .console-box {
+      background: #040711;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace, monospace;
+      font-size: 0.75rem;
+      color: #38bdf8;
+      height: 180px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Controller Navigation Header -->
+  <header class="demo-header">
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <div style="font-size:1.5rem;">🛡️</div>
+      <div>
+        <div style="font-size:1rem; font-weight:800; color:#f8fafc; letter-spacing:0.02em;">VIGIL — SIH DEMONSTRATION CONTROLLER</div>
+        <div style="font-size:0.6875rem; color:#94a3b8;">CONTROLLED EVALUATION FLOW FOR SMART INDIA HACKATHON</div>
+      </div>
+      <span class="demo-badge-pill">DEMO MODE ACTIVE</span>
+    </div>
+
+    <!-- Quick Action Launchers -->
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <a href="{% url 'tourists:home' %}" target="_blank" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#38bdf8; border-color:#334155;">📱 Tourist Mobile Portal &nearr;</a>
+      <a href="{% url 'dashboard:c2_command' %}" target="_blank" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">🖥️ Authority C2 Desk &nearr;</a>
+      <a href="{% url 'dashboard:analytics_dashboard' %}" target="_blank" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">📊 Analytics Console &nearr;</a>
+      <button onclick="resetDemoBaseline()" class="btn btn-danger btn-sm" id="btn-reset">↺ Reset Baseline</button>
+      <button onclick="startAutoPlayFlow()" class="btn btn-primary btn-sm" id="btn-autoplay" style="background:#0284c7; border-color:#0284c7;">▶ Auto-Play 12 Steps</button>
+    </div>
+  </header>
+
+  <div class="demo-container">
+
+    <!-- Scenario Banner -->
+    <div style="background:#0f172a; border:1px solid #24324d; border-radius:8px; padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <div style="font-weight:700; font-size:0.9375rem; color:#f8fafc;">Standard SIH Demonstration Flow (12 Deterministic Steps)</div>
+        <div style="font-size:0.8125rem; color:#94a3b8; margin-top:0.2rem;">
+          Click any step card to trigger that specific state, or click <b>"Auto-Play 12 Steps"</b> to run the complete end-to-end incident & response scenario live.
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <div style="text-align:right;">
+          <div style="font-size:0.6875rem; color:#94a3b8; text-transform:uppercase;">Scenario Progress</div>
+          <div style="font-size:1.125rem; font-weight:800; color:#38bdf8;" id="step-counter-text">0 / 12 Steps</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12 Step Cards Grid -->
+    <div class="step-grid">
+
+      <!-- Step 1 -->
+      <div class="step-card" id="card-step-1" onclick="runStep(1)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-1">1</div>
+            <span style="font-size:0.6875rem; color:#38bdf8; font-weight:600;">POPULATE</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Tourists Appear on Map</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            5 active tourists synchronize on the C2 GIS map across North and Central Goa.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 1</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-card" id="card-step-2" onclick="runStep(2)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-2">2</div>
+            <span style="font-size:0.6875rem; color:#10b981; font-weight:600;">RISK PROFILES</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Tourists Have Varied Risk</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Tourists receive tiered risk scores (Safe, Moderate, High) based on battery and location.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 2</button>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-card" id="card-step-3" onclick="runStep(3)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-3">3</div>
+            <span style="font-size:0.6875rem; color:#f59e0b; font-weight:600;">GEOFENCE</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Tourist Enters High-Risk Zone</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Ananya enters the restricted Vagator Cliffs perimeter; geofence entry breach logged.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 3</button>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step-card" id="card-step-4" onclick="runStep(4)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-4">4</div>
+            <span style="font-size:0.6875rem; color:#ef4444; font-weight:600;">RISK SURGE</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Risk Score Increases</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Ananya's composite risk index dynamically spikes from 14/100 to 82/100 (CRITICAL).
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 4</button>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step-card" id="card-step-5" onclick="runStep(5)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-5">5</div>
+            <span style="font-size:0.6875rem; color:#f59e0b; font-weight:600;">NOTIFICATION</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Tourist Receives Warning</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Immediate push warning sent to Ananya's device advising safe 50m fallback.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 5</button>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="step-card" id="card-step-6" onclick="runStep(6)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-6">6</div>
+            <span style="font-size:0.6875rem; color:#ef4444; font-weight:600;">EMERGENCY SOS</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Tourist Triggers SOS</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Ananya activates 1-tap SOS panic beacon (SOS-2026-DEMO01) with live GPS.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 6</button>
+      </div>
+
+      <!-- Step 7 -->
+      <div class="step-card" id="card-step-7" onclick="runStep(7)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-7">7</div>
+            <span style="font-size:0.6875rem; color:#38bdf8; font-weight:600;">C2 DISPATCH</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Authority Receives Live SOS</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            C2 Command desk receives real-time WebSocket event and increments active panic count.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 7</button>
+      </div>
+
+      <!-- Step 8 -->
+      <div class="step-card" id="card-step-8" onclick="runStep(8)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-8">8</div>
+            <span style="font-size:0.6875rem; color:#ef4444; font-weight:600;">GIS PLOT</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Incident Appears on Map</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Leaflet map focuses and plots a pulsating red emergency beacon over Vagator Cliffs.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 8</button>
+      </div>
+
+      <!-- Step 9 -->
+      <div class="step-card" id="card-step-9" onclick="runStep(9)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-9">9</div>
+            <span style="font-size:0.6875rem; color:#38bdf8; font-weight:600;">ACKNOWLEDGE</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Authority Acknowledges</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            C2 Operator acknowledges alert; confirmation receipt sent to Ananya's HUD.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 9</button>
+      </div>
+
+      <!-- Step 10 -->
+      <div class="step-card" id="card-step-10" onclick="runStep(10)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-10">10</div>
+            <span style="font-size:0.6875rem; color:#10b981; font-weight:600;">DISPATCH PCR</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Authority Responds</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Assigns Patrol Alpha (PCR-PANJIM-01) with 4.0-min ETA and first-aid gear.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 10</button>
+      </div>
+
+      <!-- Step 11 -->
+      <div class="step-card" id="card-step-11" onclick="runStep(11)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-11">11</div>
+            <span style="font-size:0.6875rem; color:#10b981; font-weight:600;">RESOLUTION</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Incident is Resolved</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Tourist rescued, status reset to ACTIVE, responder returned to AVAILABLE.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 11</button>
+      </div>
+
+      <!-- Step 12 -->
+      <div class="step-card" id="card-step-12" onclick="runStep(12)">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="step-num" id="num-12">12</div>
+            <span style="font-size:0.6875rem; color:#a855f7; font-weight:600;">ANALYTICS</span>
+          </div>
+          <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">Analytics Update</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.35rem;">
+            Operations charts and KPIs re-aggregate live response times and resolved cases.
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:0.75rem; font-size:0.75rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Trigger Step 12</button>
+      </div>
+
+    </div>
+
+    <!-- Live Execution Telemetry Log Console -->
+    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">Demonstration Telemetry & Event Stream</span>
+        <span style="font-size:0.6875rem; color:#64748b;" id="auto-play-timer">IDLE</span>
+      </div>
+      <div class="console-box" id="demo-console-log">
+        [READY] VIGIL SIH Demonstration Controller initialized. Click "Auto-Play 12 Steps" or trigger any step.
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let isAutoPlaying = false;
+    let currentStep = 0;
+
+    function logToConsole(message) {
+      const box = document.getElementById('demo-console-log');
+      const time = new Date().toLocaleTimeString();
+      box.innerHTML += `\n[${time}] ${message}`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function resetDemoBaseline() {
+      logToConsole("↺ Resetting demonstration environment to baseline...");
+      try {
+        const res = await fetch('/demo/api/reset/', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          logToConsole("✅ Baseline restored. All mock states reset.");
+          for (let i = 1; i <= 12; i++) {
+            const card = document.getElementById(`card-step-${i}`);
+            if (card) {
+              card.classList.remove('active', 'completed');
+            }
+          }
+          currentStep = 0;
+          document.getElementById('step-counter-text').innerText = `0 / 12 Steps`;
+        }
+      } catch (err) {
+        logToConsole(`❌ Reset error: ${err}`);
+      }
+    }
+
+    async function runStep(stepId) {
+      logToConsole(`⚡ Executing Step ${stepId}...`);
+      const card = document.getElementById(`card-step-${stepId}`);
+      if (card) card.classList.add('active');
+
+      try {
+        const res = await fetch(`/demo/api/step/${stepId}/`, { method: 'POST' });
+        const json = await res.json();
+        if (json.success) {
+          const stepData = json.data;
+          logToConsole(`✅ [STEP ${stepId}] ${stepData.title}: ${stepData.description}`);
+          if (card) {
+            card.classList.remove('active');
+            card.classList.add('completed');
+          }
+          currentStep = stepId;
+          document.getElementById('step-counter-text').innerText = `${stepId} / 12 Steps`;
+          return true;
+        } else {
+          logToConsole(`❌ Step ${stepId} failed: ${json.message}`);
+          return false;
+        }
+      } catch (err) {
+        logToConsole(`❌ Step ${stepId} network error: ${err}`);
+        return false;
+      }
+    }
+
+    async function startAutoPlayFlow() {
+      if (isAutoPlaying) return;
+      isAutoPlaying = true;
+      const btn = document.getElementById('btn-autoplay');
+      btn.innerText = "⏳ Running Auto-Play...";
+      btn.disabled = true;
+
+      await resetDemoBaseline();
+      await new Promise(r => setTimeout(r, 800));
+
+      for (let s = 1; s <= 12; s++) {
+        document.getElementById('auto-play-timer').innerText = `EXECUTING STEP ${s} OF 12...`;
+        await runStep(s);
+        // Wait 2.2 seconds between steps for visual presentation
+        await new Promise(r => setTimeout(r, 2200));
+      }
+
+      document.getElementById('auto-play-timer').innerText = `COMPLETED (12/12)`;
+      btn.innerText = "▶ Re-run Auto-Play";
+      btn.disabled = false;
+      isAutoPlaying = false;
+      logToConsole("🎉 Full 12-Step Controlled SIH Scenario Finished Successfully!");
+    }
+  </script>
+</body>
+</html>

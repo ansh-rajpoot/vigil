@@ -1,0 +1,67 @@
+<!-- Reusable Top Navigation Component -->
+<nav class="tourist-navbar">
+  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 1200px; margin: 0 auto;">
+    <a href="{% url 'tourists:home' %}" class="tourist-brand" style="text-decoration:none;">
+      <span style="letter-spacing: 0.05em;">VIGIL</span>
+      <span class="tourist-brand-badge">Safety Companion</span>
+    </a>
+
+    <!-- Mobile Hamburger Menu Button -->
+    <button class="tourist-nav-toggle" id="tourist-nav-toggle" aria-label="Toggle navigation menu" onclick="toggleTouristMobileNav()">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+
+    {% if user.is_authenticated %}
+    <ul class="tourist-nav-links" id="tourist-nav-menu">
+      <li><a href="{% url 'tourists:home' %}" class="tourist-nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Dashboard</a></li>
+      <li><a href="{% url 'maps:place_safety_explorer' %}" class="tourist-nav-link {% if request.resolver_match.url_name == 'place_safety_explorer' %}active{% endif %}">Places & Safety</a></li>
+      <li><a href="{% url 'maps:safe_routes' %}" class="tourist-nav-link {% if request.resolver_match.url_name == 'safe_routes' %}active{% endif %}">Safe Routes</a></li>
+      <li><a href="{% url 'digital_id:tourist_id_card' %}" class="tourist-nav-link {% if request.resolver_match.url_name == 'tourist_id_card' %}active{% endif %}">Digital ID</a></li>
+      <li><a href="{% url 'maps:gis_explorer' %}" class="tourist-nav-link {% if request.resolver_match.url_name == 'gis_explorer' %}active{% endif %}">GIS Map</a></li>
+      <li><a href="{% url 'incidents:incident_feed' %}" class="tourist-nav-link {% if 'incident' in request.resolver_match.url_name %}active{% endif %}">Incidents & Hazards</a></li>
+      <li><a href="{% url 'tourists:profile' %}" class="tourist-nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">Profile</a></li>
+      
+      <!-- Alerts & Notification Dropdown Trigger -->
+      <li style="position: relative;">
+        <button id="nav-alerts-bell-btn" onclick="toggleNavAlertsPanel()" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 6px; display: flex; align-items: center; color: var(--text-primary);" title="Safety Advisories">
+          <span>🔔</span>
+        </button>
+
+        <!-- Dropdown Notification Panel -->
+        <div id="nav-alerts-panel" style="display: none; position: absolute; top: calc(100% + 8px); right: 0; width: 340px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15); z-index: 1050; padding: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5rem; border-bottom: 1px solid #f1f5f9; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #0f172a; text-transform: uppercase;">Active Safety Advisories</span>
+            <span style="font-size: 0.6875rem; color: #10b981; font-weight: 600;">● LIVE FEED</span>
+          </div>
+          <div id="nav-alerts-content" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="font-size: 0.75rem; color: #64748b; text-align: center; padding: 1rem;">Loading active regional alerts...</div>
+          </div>
+        </div>
+      </li>
+
+      {% if user.is_operator %}
+      <li><a href="{% url 'dashboard:c2_command' %}" class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;">C2 Command &rarr;</a></li>
+      {% endif %}
+      <li><a href="{% url 'accounts:logout' %}" class="tourist-nav-link" style="color:#ef4444;">Logout</a></li>
+    </ul>
+    {% else %}
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+      <a href="{% url 'accounts:login' %}" class="btn btn-secondary btn-sm">Sign In</a>
+      <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm">Register Tourist ID</a>
+    </div>
+    {% endif %}
+  </div>
+</nav>
+
+<script>
+function toggleTouristMobileNav() {
+  const menu = document.getElementById('tourist-nav-menu');
+  const btn = document.getElementById('tourist-nav-toggle');
+  if (menu) {
+    menu.classList.toggle('is-open');
+    if (btn) btn.classList.toggle('is-active');
+  }
+}
+</script>

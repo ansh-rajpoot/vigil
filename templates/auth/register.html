@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register Digital Tourist ID — VIGIL{% endblock %}
+
+{% block content %}
+<div style="max-width: 640px; margin: 2rem auto; padding: 0 1rem;">
+
+  <div style="text-align: center; margin-bottom: 1.75rem;">
+    <span class="badge badge-safe" style="margin-bottom: 0.5rem;">Official Tourism Portal</span>
+    <h1 style="font-size: 1.625rem; font-weight: 700; color: #0f172a;">Digital Tourist ID Registration</h1>
+    <p style="font-size: 0.875rem; color: #64748b; margin-top: 0.25rem;">
+      Register your travel profile to activate your cryptographic Digital Tourist ID, real-time safety monitoring, and 24x7 emergency response.
+    </p>
+  </div>
+
+  <div class="card" style="box-shadow: var(--shadow-md);">
+    <div class="card-body" style="padding: 1.75rem;">
+      <form method="post" action="{% url 'accounts:register' %}" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert-banner alert-banner-critical" style="margin-bottom: 1.25rem;">
+          <span>⚠️</span>
+          <div>
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Section 1: Account Credentials -->
+        <div style="font-size: 0.8125rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.35rem;">
+          1. Account Credentials
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.username.id_for_label }}">Username *</label>
+          {{ form.username }}
+          {% if form.username.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.username.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.first_name.id_for_label }}">First Name *</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.first_name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.last_name.id_for_label }}">Last Name *</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.last_name.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.email.id_for_label }}">Email Address *</label>
+            {{ form.email }}
+            {% if form.email.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.email.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.phone_number.id_for_label }}">Mobile Number *</label>
+            {{ form.phone_number }}
+            {% if form.phone_number.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.phone_number.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.password1.id_for_label }}">Password *</label>
+            {{ form.password1 }}
+            {% if form.password1.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.password1.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.password2.id_for_label }}">Confirm Password *</label>
+            {{ form.password2 }}
+            {% if form.password2.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.password2.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Section 2: Travel & Medical Profile -->
+        <div style="font-size: 0.8125rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.05em; margin: 1.5rem 0 0.75rem 0; border-bottom: 1px solid var(--border-color); padding-bottom: 0.35rem;">
+          2. Travel & Medical Information
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.nationality.id_for_label }}">Nationality *</label>
+            {{ form.nationality }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.blood_group.id_for_label }}">Blood Group (Optional)</label>
+            {{ form.blood_group }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.hotel_stay_details.id_for_label }}">Hotel / Resort Stay Details</label>
+          {{ form.hotel_stay_details }}
+        </div>
+
+        <!-- Section 3: Primary Emergency Contact -->
+        <div style="font-size: 0.8125rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.05em; margin: 1.5rem 0 0.75rem 0; border-bottom: 1px solid var(--border-color); padding-bottom: 0.35rem;">
+          3. Primary Emergency Contact (SOS Alerts)
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.emergency_contact_name.id_for_label }}">Contact Name *</label>
+            {{ form.emergency_contact_name }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.emergency_contact_phone.id_for_label }}">Phone Number *</label>
+            {{ form.emergency_contact_phone }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.emergency_contact_relation.id_for_label }}">Relationship *</label>
+            {{ form.emergency_contact_relation }}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1.5rem;">
+          Complete Registration & Generate Digital ID &rarr;
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 1.5rem; font-size: 0.8125rem; color: #64748b;">
+    Already registered? <a href="{% url 'accounts:login' %}" style="font-weight: 600; color: #1e3a8a;">Sign in here &rarr;</a>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+# Core Django Framework & Async WebSockets
+Django>=5.0,<6.2
+djangorestframework>=3.15.0
+channels>=4.1.0
+daphne>=4.1.0
+channels-redis>=4.2.0
+
+# Production Application Servers & Static Serving
+gunicorn>=21.2.0
+uvicorn[standard]>=0.28.0
+whitenoise>=6.6.0
+
+# Database & Environment
+psycopg2-binary>=2.9.9
+dj-database-url>=2.1.0
+python-dotenv>=1.0.0
+django-cors-headers>=4.3.0
+redis>=5.0.0
+
+# GIS, Spatial & Mathematical Analysis
+shapely>=2.0.0
+numpy>=1.26.0
+
+# Image Processing, QR Codes & Computer Vision
+qrcode[pil]>=7.4.2
+Pillow>=10.2.0
+opencv-python-headless>=4.9.0
+
+# HTTP & Async Utilities
+requests>=2.31.0
+asgiref>=3.7.0

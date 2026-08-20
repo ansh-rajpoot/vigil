@@ -1,0 +1,156 @@
+{% extends 'base_c2.html' %}
+
+{% block title %}Tourism Administration & RBAC Portal — VIGIL C2{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem; flex: 1; overflow-y: auto; background: #090d16; color: #f8fafc;">
+
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+      <div style="font-size: 0.75rem; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.05em;">
+        GOVERNMENT OF GOA • DEPARTMENT OF TOURISM
+      </div>
+      <h1 style="font-size: 1.5rem; font-weight: 700; color: #f8fafc; margin-top: 0.25rem;">
+        Tourism Administrator Central Governance Console
+      </h1>
+      <p style="font-size: 0.875rem; color: #94a3b8;">
+        User role authorization, security policy enforcement, geofence audit logs, and responder fleet oversight.
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{% url 'dashboard:c2_command' %}" class="btn btn-secondary btn-sm" style="background: #1e293b; color: #f8fafc; border-color: #334155;">
+        &larr; Tactical GIS Map
+      </a>
+      <a href="{% url 'accounts:register_authority' %}" class="btn btn-primary btn-sm">
+        + Onboard Officer
+      </a>
+    </div>
+  </div>
+
+  <!-- Telemetry Metrics Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="card" style="background: #0f172a; border-color: #24324d; padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Registered Tourists</div>
+      <div style="font-size: 1.75rem; font-weight: 800; color: #10b981; margin-top: 0.25rem;">{{ tourists_count }}</div>
+      <div style="font-size: 0.6875rem; color: #64748b; margin-top: 0.25rem;">Active Digital IDs</div>
+    </div>
+
+    <div class="card" style="background: #0f172a; border-color: #24324d; padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Law Enforcement Personnel</div>
+      <div style="font-size: 1.75rem; font-weight: 800; color: #38bdf8; margin-top: 0.25rem;">{{ authorities_count }}</div>
+      <div style="font-size: 0.6875rem; color: #64748b; margin-top: 0.25rem;">C2 Operators & PCR Patrols</div>
+    </div>
+
+    <div class="card" style="background: #0f172a; border-color: #24324d; padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Active SOS Emergencies</div>
+      <div style="font-size: 1.75rem; font-weight: 800; color: {% if active_sos_count > 0 %}#ef4444{% else %}#10b981{% endif %}; margin-top: 0.25rem;">
+        {{ active_sos_count }}
+      </div>
+      <div style="font-size: 0.6875rem; color: #64748b; margin-top: 0.25rem;">Real-time panic beacons</div>
+    </div>
+
+    <div class="card" style="background: #0f172a; border-color: #24324d; padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Geofence Zones & Breaches</div>
+      <div style="font-size: 1.75rem; font-weight: 800; color: #f59e0b; margin-top: 0.25rem;">{{ active_zones_count }} / {{ breaches_count }}</div>
+      <div style="font-size: 0.6875rem; color: #64748b; margin-top: 0.25rem;">Active zones / Breaches recorded</div>
+    </div>
+  </div>
+
+  <!-- Main Grid: User Accounts & System Logs -->
+  <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+
+    <!-- User Role Management Table -->
+    <div class="card" style="background: #0f172a; border-color: #24324d;">
+      <div class="card-header" style="background: #131d33; border-color: #24324d; display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title" style="color: #f8fafc;">System Users & Role-Based Access Control (RBAC)</span>
+        <span class="badge badge-safe">{{ users.count }} Total Accounts</span>
+      </div>
+      <div class="card-body" style="padding: 0; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.8125rem; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid #24324d; color: #94a3b8; font-size: 0.6875rem; text-transform: uppercase;">
+              <th style="padding: 0.75rem 1rem;">User / Official ID</th>
+              <th style="padding: 0.75rem 1rem;">Full Name</th>
+              <th style="padding: 0.75rem 1rem;">Email / Phone</th>
+              <th style="padding: 0.75rem 1rem;">Agency / Department</th>
+              <th style="padding: 0.75rem 1rem;">Current Role</th>
+              <th style="padding: 0.75rem 1rem;">Verification Status</th>
+              <th style="padding: 0.75rem 1rem;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr style="border-bottom: 1px solid #1e293b;">
+              <td style="padding: 0.75rem 1rem; font-family: monospace; font-weight: 700; color: #38bdf8;">
+                {{ u.username }}
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #f8fafc; font-weight: 600;">
+                {{ u.get_full_name|default:"—" }}
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #cbd5e1;">
+                <div>{{ u.email }}</div>
+                <div style="font-size: 0.6875rem; color: #64748b;">{{ u.phone_number|default:"—" }}</div>
+              </td>
+              <td style="padding: 0.75rem 1rem; color: #94a3b8;">
+                {{ u.agency_name|default:"General Public" }}
+                {% if u.badge_number %}<div style="font-size: 0.6875rem; color: #38bdf8;">Badge: {{ u.badge_number }}</div>{% endif %}
+              </td>
+              <td style="padding: 0.75rem 1rem;">
+                <span class="badge {{ u.get_role_badge_class }}">
+                  {{ u.get_role_display }}
+                </span>
+              </td>
+              <td style="padding: 0.75rem 1rem;">
+                {% if u.is_verified %}
+                <span style="color: #10b981; font-weight: 600;">✓ Verified</span>
+                {% else %}
+                <span style="color: #f59e0b;">Pending KYC</span>
+                {% endif %}
+              </td>
+              <td style="padding: 0.75rem 1rem;">
+                <select onchange="updateUserRole({{ u.id }}, this.value)" class="form-select" style="background: #1e293b; color: #f8fafc; border-color: #334155; padding: 0.25rem 0.5rem; font-size: 0.75rem; width: auto;">
+                  <option value="TOURIST" {% if u.role == 'TOURIST' %}selected{% endif %}>Tourist</option>
+                  <option value="AUTHORITY" {% if u.role == 'AUTHORITY' %}selected{% endif %}>Law Enforcement</option>
+                  <option value="OPERATOR" {% if u.role == 'OPERATOR' %}selected{% endif %}>C2 Operator</option>
+                  <option value="RESPONDER" {% if u.role == 'RESPONDER' %}selected{% endif %}>Responder</option>
+                  <option value="ADMIN" {% if u.role == 'ADMIN' %}selected{% endif %}>Tourism Admin</option>
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function updateUserRole(userId, newRole) {
+  if (!confirm(`Are you sure you want to change user role to ${newRole}?`)) {
+    return;
+  }
+  try {
+    const res = await fetch(`/auth/api/admin/users/${userId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ role: newRole })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      window.location.reload();
+    } else {
+      alert('Error updating role: ' + data.message);
+    }
+  } catch (err) {
+    alert('Server error updating role.');
+  }
+}
+</script>
+{% endblock %}

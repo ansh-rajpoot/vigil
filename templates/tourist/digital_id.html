@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Digital Tourist ID — VIGIL{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 1rem auto; padding: 0 1rem;">
+
+  <!-- Header -->
+  <div style="text-align: center; margin-bottom: 1.5rem;">
+    <div style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a; letter-spacing: 0.05em; text-transform: uppercase;">
+      Official Government of Tourism Safety Network
+    </div>
+    <h1 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.25rem;">Cryptographic Digital Tourist ID</h1>
+    <p style="font-size: 0.8125rem; color: #64748b; margin-top: 0.25rem;">
+      Present this card to Tourism Police, Hotels, and Checkpoints for instant KYC and safety verification.
+    </p>
+  </div>
+
+  <!-- Dynamic Rotating Token Bar -->
+  <div class="card" style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; background: #ffffff;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <span style="font-size: 1.25rem;">🔄</span>
+      <div>
+        <div style="font-size: 0.75rem; color: #64748b;">Dynamic Security Token (TOTP)</div>
+        <div style="font-family: var(--font-mono); font-weight: 700; font-size: 1.125rem; color: #1e3a8a;" id="dynamic-totp-val">
+          {{ digital_id.get_current_totp }}
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: right; width: 140px;">
+      <div style="font-size: 0.6875rem; color: #64748b; margin-bottom: 0.25rem;">Auto-rotates in 30s</div>
+      <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+        <div id="totp-timer-progress" style="height: 100%; width: 100%; background: #2563eb; transition: width 1s linear;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D Flip Card Container -->
+  <div class="digital-id-perspective">
+    <div class="digital-id-card" id="digital-id-card">
+
+      <!-- FRONT FACE OF ID -->
+      <div class="id-face id-face-front">
+        <div class="id-card-header">
+          <div>
+            <div class="id-govt-tag">GOVERNMENT OF INDIA • TOURISM VIGIL</div>
+            <div class="id-title">OFFICIAL DIGITAL TOURIST ID</div>
+          </div>
+          <div class="id-number-chip">{{ digital_id.id_number }}</div>
+        </div>
+
+        <div class="id-card-content">
+          <div class="id-qr-box">
+            {% if digital_id.qr_code_image %}
+            <img id="dynamic-qr-img" src="{{ digital_id.qr_code_image.url }}" alt="Verification QR">
+            {% else %}
+            <span style="font-size: 0.75rem; color: #64748b;">Generating...</span>
+            {% endif %}
+          </div>
+
+          <div>
+            <div class="id-meta-item">
+              <div class="id-meta-label">Tourist Full Name</div>
+              <div class="id-meta-val" style="font-size: 1rem;">{{ user.get_full_name|default:user.username }}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div class="id-meta-item">
+                <div class="id-meta-label">Nationality</div>
+                <div class="id-meta-val">{{ profile.nationality }}</div>
+              </div>
+              <div class="id-meta-item">
+                <div class="id-meta-label">Blood Group</div>
+                <div class="id-meta-val" style="color: #dc2626;">{{ profile.blood_group|default:"Not Listed" }}</div>
+              </div>
+            </div>
+            <div class="id-meta-item">
+              <div class="id-meta-label">Valid Through</div>
+              <div class="id-meta-val">{{ digital_id.valid_until|date:"M d, Y" }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="id-card-footer">
+          <span class="badge badge-safe">AUTHENTIC & VERIFIED</span>
+          <span style="color:#2563eb; font-weight:600; cursor:pointer;" id="flip-id-btn">Flip for Medical & Contacts 🔄</span>
+        </div>
+      </div>
+
+      <!-- BACK FACE OF ID -->
+      <div class="id-face id-face-back">
+        <div class="id-card-header">
+          <div>
+            <div class="id-govt-tag" style="color:#059669;">MEDICAL & EMERGENCY PROFILE</div>
+            <div class="id-title">First Responder Telemetry</div>
+          </div>
+          <span class="badge badge-safe">SECURE ENCRYPTED</span>
+        </div>
+
+        <div style="margin: 0.75rem 0; font-size: 0.8125rem;">
+          <div style="margin-bottom: 0.5rem;">
+            <div style="font-size: 0.6875rem; color: #64748b; text-transform: uppercase;">Stay / Accommodation:</div>
+            <div style="font-weight: 600;">{{ profile.hotel_stay_details|default:"Radisson Blu Hotel, Knowledge Park, Greater Noida" }}</div>
+          </div>
+
+          <div style="margin-bottom: 0.5rem;">
+            <div style="font-size: 0.6875rem; color: #64748b; text-transform: uppercase;">Medical Notes & Allergies:</div>
+            <div style="color: #334155;">{{ profile.medical_conditions|default:"None listed" }} {% if profile.allergies %}| Allergies: {{ profile.allergies }}{% endif %}</div>
+          </div>
+
+          <div>
+            <div style="font-size: 0.6875rem; color: #64748b; text-transform: uppercase; margin-bottom: 0.25rem;">Emergency Contacts:</div>
+            {% for contact in emergency_contacts %}
+            <div style="display:flex; justify-content:space-between; background:#ffffff; padding:0.25rem 0.5rem; border-radius:4px; border:1px solid #e2e8f0; margin-bottom:0.25rem; font-size:0.75rem;">
+              <span><b>{{ contact.name }}</b> ({{ contact.relationship }})</span>
+              <span style="font-family:monospace; color:#1e3a8a;">{{ contact.phone_number }}</span>
+            </div>
+            {% empty %}
+            <div style="color:#64748b;">No contacts configured</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="id-card-footer">
+          <span style="font-family:monospace; font-size:0.6875rem; color:#94a3b8;">SIG: {{ digital_id.crypto_hash|slice:":16" }}...</span>
+          <span style="color:#1e3a8a; font-weight:600;">Click to Flip Front 🔄</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Action Links -->
+  <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: center;">
+    <a href="{% url 'digital_id:verify_portal' %}" target="_blank" class="btn btn-secondary btn-sm">
+      <span>🔍</span> Test Police / Hotel Scanner Portal
+    </a>
+    <a href="{% url 'tourists:profile' %}" class="btn btn-secondary btn-sm">
+      <span>✏️</span> Edit Medical / Contacts
+    </a>
+  </div>
+
+</div>
+{% endblock %}

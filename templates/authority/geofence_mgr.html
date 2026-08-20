@@ -1,0 +1,314 @@
+{% extends 'base_c2.html' %}
+
+{% block title %}Geofence Spatial Zone Manager — VIGIL C2{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem; flex: 1; overflow-y: auto; background: #090d16;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+      <h1 style="font-size:1.5rem; font-weight:700; color:#f8fafc;">Geofence Spatial Zone Manager</h1>
+      <p style="font-size:0.875rem; color:#94a3b8;">Define restricted perimeters, danger zones, tourist safe havens, and monitor real-time breach logs.</p>
+    </div>
+    <a href="{% url 'dashboard:c2_command' %}" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">&larr; Back to Tactical Map</a>
+  </div>
+
+  <!-- Interactive Leaflet Geofence Visualizer -->
+  <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc; margin-bottom:1.5rem;">
+    <div class="card-header" style="background:#131d33; border-color:#24324d; display:flex; justify-content:space-between; align-items:center;">
+      <span class="card-title" style="color:#f8fafc;">Active Geofence Boundaries Map</span>
+      <div style="display:flex; gap:0.75rem; font-size:0.75rem;">
+        <span style="display:flex; align-items:center; gap:0.25rem;"><span style="width:10px; height:10px; background:#10b981; border-radius:2px; display:inline-block;"></span> Safe</span>
+        <span style="display:flex; align-items:center; gap:0.25rem;"><span style="width:10px; height:10px; background:#f59e0b; border-radius:2px; display:inline-block;"></span> Caution</span>
+        <span style="display:flex; align-items:center; gap:0.25rem;"><span style="width:10px; height:10px; background:#ea580c; border-radius:2px; display:inline-block;"></span> High Risk</span>
+        <span style="display:flex; align-items:center; gap:0.25rem;"><span style="width:10px; height:10px; background:#dc2626; border-radius:2px; display:inline-block;"></span> Restricted / Emergency</span>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div id="geofence-overview-map" style="height:340px; width:100%;"></div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 380px; gap:1.5rem;">
+
+    <!-- Left: Spatial Zones Table & Breach Logs -->
+    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+      <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+        <div class="card-header" style="background:#131d33; border-color:#24324d;">
+          <span class="card-title" style="color:#f8fafc;">Configured Active Geo-Zones</span>
+        </div>
+        <div class="card-body" style="padding:0; overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.875rem; text-align:left;">
+            <thead>
+              <tr style="border-bottom:1px solid #24324d; color:#94a3b8; font-size:0.75rem; text-transform:uppercase;">
+                <th style="padding:0.75rem 1rem;">Code</th>
+                <th style="padding:0.75rem 1rem;">Zone Name</th>
+                <th style="padding:0.75rem 1rem;">Category</th>
+                <th style="padding:0.75rem 1rem;">Curfew / Active Hours</th>
+                <th style="padding:0.75rem 1rem;">Advisory Warning</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for zone in zones %}
+              <tr style="border-bottom:1px solid #1e293b;">
+                <td style="padding:0.75rem 1rem; font-family:monospace; color:#38bdf8;">{{ zone.code }}</td>
+                <td style="padding:0.75rem 1rem; font-weight:600;">{{ zone.name }}</td>
+                <td style="padding:0.75rem 1rem;">
+                  <span class="badge" style="background:{{ zone.get_color_hex }}22; color:{{ zone.get_color_hex }}; border:1px solid {{ zone.get_color_hex }}44;">
+                    {{ zone.get_zone_type_display }}
+                  </span>
+                </td>
+                <td style="padding:0.75rem 1rem; font-size:0.75rem; color:#cbd5e1;">
+                  {% if zone.curfew_start_time %}
+                  {{ zone.curfew_start_time|time:"H:i" }} - {{ zone.curfew_end_time|time:"H:i" }}
+                  {% else %}
+                  24x7 Active
+                  {% endif %}
+                </td>
+                <td style="padding:0.75rem 1rem; font-size:0.75rem; color:#94a3b8;">{{ zone.safety_advisory|truncatechars:50 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" style="padding:2rem; text-align:center; color:#64748b;">No active zones configured.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Breach Containment Audit Log -->
+      <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+        <div class="card-header" style="background:#131d33; border-color:#24324d;">
+          <span class="card-title" style="color:#f8fafc;">Real-Time Geofence Breach & Transition Logs</span>
+          <span class="badge badge-warning">Automated Spatial Audit</span>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.8125rem; text-align:left;">
+            <thead>
+              <tr style="border-bottom:1px solid #24324d; color:#94a3b8; font-size:0.6875rem; text-transform:uppercase;">
+                <th style="padding:0.6rem 1rem;">Timestamp</th>
+                <th style="padding:0.6rem 1rem;">Tourist</th>
+                <th style="padding:0.6rem 1rem;">Zone Breached</th>
+                <th style="padding:0.6rem 1rem;">Breach Type</th>
+                <th style="padding:0.6rem 1rem;">Risk Score</th>
+                <th style="padding:0.6rem 1rem;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for breach in active_breaches %}
+              <tr style="border-bottom:1px solid #1e293b;">
+                <td style="padding:0.6rem 1rem; color:#94a3b8;">{{ breach.timestamp|date:"H:i:s" }}</td>
+                <td style="padding:0.6rem 1rem; font-weight:600;">{{ breach.tourist.user.get_full_name|default:breach.tourist.user.username }}</td>
+                <td style="padding:0.6rem 1rem; color:#f8fafc;">{{ breach.zone.name }}</td>
+                <td style="padding:0.6rem 1rem;">
+                  <span class="badge badge-critical">{{ breach.get_breach_type_display }}</span>
+                </td>
+                <td style="padding:0.6rem 1rem; font-weight:700; color:#ea580c;">{{ breach.risk_score_after }}/100</td>
+                <td style="padding:0.6rem 1rem;">
+                  <button onclick="acknowledgeBreach({{ breach.id }})" class="btn btn-secondary btn-sm" style="padding:0.2rem 0.5rem; font-size:0.6875rem; background:#1e293b; color:#f8fafc; border-color:#334155;">
+                    Acknowledge
+                  </button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" style="padding:1.5rem; text-align:center; color:#64748b;">No unacknowledged zone breaches.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Create GeoZone Form -->
+    <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc; height:fit-content;">
+      <div class="card-header" style="background:#131d33; border-color:#24324d;">
+        <span class="card-title" style="color:#f8fafc;">Create Spatial Zone</span>
+      </div>
+      <div class="card-body">
+        <form id="form-create-geozone">
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Zone Name</label>
+            <input type="text" id="zone_name" class="form-input" style="background:#1e293b; color:#f8fafc; border-color:#334155;" placeholder="e.g. Fort Aguada Cliff Restricted Zone" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Zone Code (Unique)</label>
+            <input type="text" id="zone_code" class="form-input" style="background:#1e293b; color:#f8fafc; border-color:#334155;" placeholder="e.g. ZONE-AGUADA-01" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Zone Classification</label>
+            <select id="zone_type" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155;">
+              <option value="SAFE">SAFE (Designated Safe Haven)</option>
+              <option value="CAUTION" selected>CAUTION (Heightened Vigilance)</option>
+              <option value="HIGH_RISK">HIGH_RISK (Dangerous Waters / Crime Blackspot)</option>
+              <option value="RESTRICTED">RESTRICTED (Strict No Entry / Cliff Edge)</option>
+              <option value="EMERGENCY">EMERGENCY (Disaster Evacuation Zone)</option>
+            </select>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+            <div class="form-group">
+              <label class="form-label" style="color:#cbd5e1;">Center Latitude</label>
+              <input type="number" step="any" id="center_lat" class="form-input" style="background:#1e293b; color:#f8fafc; border-color:#334155;" placeholder="15.5420" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color:#cbd5e1;">Center Longitude</label>
+              <input type="number" step="any" id="center_lng" class="form-input" style="background:#1e293b; color:#f8fafc; border-color:#334155;" placeholder="73.7580" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Approximate Radius (Meters)</label>
+            <input type="number" id="radius_meters" class="form-input" style="background:#1e293b; color:#f8fafc; border-color:#334155;" value="400">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Automated Tourist Safety Advisory</label>
+            <textarea id="safety_advisory" class="form-input" style="background:#1e293b; color:#f8fafc; border-color:#334155; height:70px;" placeholder="Message automatically dispatched to tourists upon entering this perimeter..."></textarea>
+          </div>
+
+          <button type="submit" id="btn-save-zone" class="btn btn-primary" style="width:100%; margin-top:0.5rem; justify-content:center;">
+            Register & Activate Geo-Zone
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Leaflet Map Init
+  const map = L.map('geofence-overview-map', {
+    center: [15.5200, 73.7900],
+    zoom: 12
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> • VIGIL Geofence C2'
+  }).addTo(map);
+
+  // Fetch and display all active zones
+  fetch('/geofencing/api/zones/')
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.data) {
+        res.data.forEach(z => {
+          if (z.polygon_geojson) {
+            const colorMap = {
+              'SAFE': '#10b981',
+              'CAUTION': '#f59e0b',
+              'HIGH_RISK': '#ea580c',
+              'RESTRICTED': '#dc2626',
+              'EMERGENCY': '#ef4444'
+            };
+            const color = colorMap[z.zone_type] || '#38bdf8';
+
+            L.geoJSON(z.polygon_geojson, {
+              style: {
+                color: color,
+                weight: 2,
+                fillColor: color,
+                fillOpacity: 0.15
+              }
+            }).bindPopup(`
+              <div style="font-family:sans-serif; color:#0f172a;">
+                <div style="font-size:11px; font-weight:700; color:${color};">${z.zone_type}</div>
+                <div style="font-size:13px; font-weight:700; margin:2px 0;">${z.name}</div>
+                <div style="font-size:12px; color:#475569;">${z.safety_advisory || ''}</div>
+              </div>
+            `).addTo(map);
+          }
+        });
+      }
+    });
+
+  // Map Click to Set Center Coordinates
+  let centerPin = null;
+  map.on('click', (e) => {
+    const lat = e.latlng.lat.toFixed(4);
+    const lng = e.latlng.lng.toFixed(4);
+    const latInp = document.getElementById('center_lat');
+    const lngInp = document.getElementById('center_lng');
+    if (latInp && lngInp) {
+      latInp.value = lat;
+      lngInp.value = lng;
+    }
+    if (centerPin) {
+      centerPin.setLatLng(e.latlng);
+    } else {
+      centerPin = L.marker(e.latlng).addTo(map);
+    }
+  });
+
+  // Create Form Handler
+  document.getElementById('form-create-geozone')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const lat = parseFloat(document.getElementById('center_lat').value);
+    const lng = parseFloat(document.getElementById('center_lng').value);
+    const rad = parseInt(document.getElementById('radius_meters').value) || 400;
+    const delta = (rad / 111320.0);
+
+    const polygon = {
+      type: "Polygon",
+      coordinates: [[
+        [lng - delta, lat - delta],
+        [lng + delta, lat - delta],
+        [lng + delta, lat + delta],
+        [lng - delta, lat + delta],
+        [lng - delta, lat - delta]
+      ]]
+    };
+
+    const payload = {
+      name: document.getElementById('zone_name').value,
+      code: document.getElementById('zone_code').value,
+      zone_type: document.getElementById('zone_type').value,
+      center_latitude: lat,
+      center_longitude: lng,
+      radius_meters: rad,
+      polygon_geojson: polygon,
+      safety_advisory: document.getElementById('safety_advisory').value
+    };
+
+    const res = await fetch('/geofencing/api/zones/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert('Geo-zone registered and deployed to tactical map.');
+      window.location.reload();
+    } else {
+      alert('Error creating geo-zone: ' + JSON.stringify(data.errors || data.message));
+    }
+  });
+});
+
+async function acknowledgeBreach(breachId) {
+  const res = await fetch(`/geofencing/api/breaches/${breachId}/acknowledge/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({ action_taken: 'Acknowledged and logged by C2 Desk Officer.' })
+  });
+  const data = await res.json();
+  if (data.success) {
+    window.location.reload();
+  }
+}
+</script>
+{% endblock %}

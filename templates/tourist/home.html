@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tourist Safety Companion — VIGIL{% endblock %}
+
+{% block content %}
+<!-- Top Welcome & Status Banner -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.5rem; font-weight: 700; color: #0f172a;">Welcome, {{ user.first_name|default:user.username }}</h1>
+    <div style="font-size: 0.875rem; color: #64748b; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem; flex-wrap: wrap;">
+      <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:0.8125rem; font-weight:600; padding:0.25rem 0.6rem; display:inline-flex; align-items:center; gap:0.35rem; border-radius:6px;">
+        <span style="width:7px; height:7px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 6px #10b981;"></span>
+        <span id="header-current-location">📍 {{ profile.destination_city|default:"Current Location: Greater Noida (NCR)" }}</span>
+      </span>
+      <span>•</span>
+      <span>Trip Status: <b style="color:#059669;">{{ profile.get_trip_status_display }}</b></span>
+      <span>•</span>
+      <span>Battery: <b id="header-battery-level">{{ profile.battery_level }}%</b></span>
+      {% if profile.current_latitude and profile.current_longitude %}
+      <span>•</span>
+      <span style="font-family:var(--font-mono); font-size:0.75rem; color:#475569; background:#f1f5f9; padding:0.15rem 0.45rem; border-radius:4px;" id="header-gps-coords">
+        GPS: {{ profile.current_latitude|floatformat:4 }}, {{ profile.current_longitude|floatformat:4 }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 0.5rem;">
+    <button id="safe-checkin-btn" class="btn btn-secondary btn-sm">
+      <span>📍</span> Safe Check-in
+    </button>
+    <a href="{% url 'digital_id:tourist_id_card' %}" class="btn btn-primary btn-sm">
+      <span>🪪</span> View Digital ID
+    </a>
+  </div>
+</div>
+
+<!-- Active Emergency Alert Warning (if any) -->
+{% for alert in active_alerts %}
+<div class="alert-banner" style="margin-bottom: 1.25rem; border: 1px solid {% if alert.severity == 'CRITICAL' %}#ef4444{% elif alert.severity == 'WARNING' %}#f59e0b{% else %}#38bdf8{% endif %}; background: {% if alert.severity == 'CRITICAL' %}#fef2f2{% elif alert.severity == 'WARNING' %}#fffbeb{% else %}#f0f9ff{% endif %}; border-radius: 8px; padding: 0.85rem 1rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+  <span style="font-size: 1.35rem; line-height: 1;">
+    {% if alert.alert_type == 'DISASTER' %}🌊{% elif alert.alert_type == 'SEVERE_WEATHER' %}⛈️{% elif alert.alert_type == 'CRIME_ACTIVITY' %}🚨{% elif alert.alert_type == 'ACCIDENT' %}🚗{% elif alert.alert_type == 'CROWD_EMERGENCY' %}👥{% elif alert.alert_type == 'RESTRICTED_AREA' %}⛔{% else %}ℹ️{% endif %}
+  </span>
+  <div style="flex: 1;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.25rem;">
+      <div style="font-weight: 700; font-size: 0.875rem; color: {% if alert.severity == 'CRITICAL' %}#991b1b{% elif alert.severity == 'WARNING' %}#92400e{% else %}#0369a1{% endif %};">
+        {{ alert.get_alert_type_display }}: {{ alert.title }}
+      </div>
+      <span class="badge {% if alert.severity == 'CRITICAL' %}badge-critical{% elif alert.severity == 'WARNING' %}badge-warning{% else %}badge-safe{% endif %}">
+        {{ alert.get_severity_display }}
+      </span>
+    </div>
+    <div style="font-size: 0.8125rem; color: #334155; line-height: 1.4;">{{ alert.message }}</div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Main Grid Layout -->
+<div style="display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; align-items: start;">
+
+  <!-- Left Column: Risk Index & Navigation Hub -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+    <!-- Professional Weighted Tourist Risk Index Card -->
+    <div class="card" style="border-top: 4px solid {% if risk.risk_level == 'SAFE' %}#10b981{% elif risk.risk_level == 'MODERATE' %}#f59e0b{% elif risk.risk_level == 'HIGH' %}#ea580c{% else %}#ef4444{% endif %};">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 0.6875rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+            Situational Safety & Risk Assessment Index
+          </div>
+          <div style="font-weight: 700; font-size: 1.125rem; color: #0f172a; margin-top: 0.15rem;">
+            Real-Time Risk Score
+          </div>
+        </div>
+        <span class="badge {{ risk.get_risk_badge_class }}" style="font-size: 0.8125rem; padding: 0.35rem 0.75rem;">
+          {{ risk.get_risk_level_display }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <!-- Score Readout & Horizontal Multi-Segment Progress Bar -->
+        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <span style="font-family: var(--font-heading); font-size: 2.75rem; font-weight: 800; color: #0f172a; line-height: 1;">
+            {{ risk.overall_score }}
+          </span>
+          <span style="font-size: 1rem; font-weight: 600; color: #64748b;">/ 100 Risk Index</span>
+          <span style="font-size: 0.75rem; color: #94a3b8; margin-left: auto;">(0 = Safest, 100 = Critical)</span>
+        </div>
+
+        <!-- Horizontal Multi-Tier Risk Gauge Bar -->
+        <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 1.25rem;">
+          <div style="width: 30%; height: 100%; background: #10b981;" title="Safe: 0-30"></div>
+          <div style="width: 30%; height: 100%; background: #f59e0b;" title="Moderate: 31-60"></div>
+          <div style="width: 20%; height: 100%; background: #ea580c;" title="High: 61-80"></div>
+          <div style="width: 20%; height: 100%; background: #ef4444;" title="Critical: 81-100"></div>
+        </div>
+
+        <!-- Actionable Recommendation -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.25rem;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 0.25rem;">
+            🛡️ Current Assessment & Actionable Guidance:
+          </div>
+          <div style="font-size: 0.875rem; color: #334155; line-height: 1.45;">
+            {{ risk.ai_recommendation }}
+          </div>
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
+            <b>Primary Factor:</b> {{ risk.primary_risk_factor }}
+          </div>
+        </div>
+
+        <!-- 5-Factor Risk Weight Breakdown Grid -->
+        <div style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+          Weighted Safety Factor Breakdown:
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem;">
+          <div class="factor-item">
+            <div class="factor-name">📍 Spatial Proximity</div>
+            <div class="factor-status">
+              {% if risk.spatial_risk_score <= 10 %}<span style="color:#10b981;">Safe ({{ risk.spatial_risk_score }}/35)</span>
+              {% elif risk.spatial_risk_score <= 20 %}<span style="color:#f59e0b;">Moderate ({{ risk.spatial_risk_score }}/35)</span>
+              {% else %}<span style="color:#dc2626;">Hazard ({{ risk.spatial_risk_score }}/35)</span>{% endif %}
+            </div>
+          </div>
+          <div class="factor-item">
+            <div class="factor-name">🕒 Time of Day</div>
+            <div class="factor-status">
+              {% if risk.temporal_risk_score <= 8 %}<span style="color:#10b981;">Daylight ({{ risk.temporal_risk_score }}/25)</span>
+              {% elif risk.temporal_risk_score <= 16 %}<span style="color:#f59e0b;">Evening ({{ risk.temporal_risk_score }}/25)</span>
+              {% else %}<span style="color:#dc2626;">Late Night ({{ risk.temporal_risk_score }}/25)</span>{% endif %}
+            </div>
+          </div>
+          <div class="factor-item">
+            <div class="factor-name">🛡️ Police & POIs</div>
+            <div class="factor-status">
+              {% if risk.isolation_risk_score <= 6 %}<span style="color:#10b981;">&lt;1km ({{ risk.isolation_risk_score }}/20)</span>
+              {% elif risk.isolation_risk_score <= 14 %}<span style="color:#f59e0b;">&lt;3km ({{ risk.isolation_risk_score }}/20)</span>
+              {% else %}<span style="color:#dc2626;">Isolated ({{ risk.isolation_risk_score }}/20)</span>{% endif %}
+            </div>
+          </div>
+          <div class="factor-item">
+            <div class="factor-name">⚠️ Active Warnings</div>
+            <div class="factor-status">
+              {% if risk.crowd_risk_score <= 4 %}<span style="color:#10b981;">Clear ({{ risk.crowd_risk_score }}/15)</span>
+              {% else %}<span style="color:#ea580c;">Advisory Active ({{ risk.crowd_risk_score }}/15)</span>{% endif %}
+            </div>
+          </div>
+          <div class="factor-item">
+            <div class="factor-name">📱 Device Battery</div>
+            <div class="factor-status">
+              {% if risk.device_health_score <= 3 %}<span style="color:#10b981;">Healthy ({{ profile.battery_level }}%)</span>
+              {% else %}<span style="color:#dc2626;">Low ({{ profile.battery_level }}%)</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Action Safety Hub Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <a href="{% url 'maps:gis_explorer' %}" class="card" style="text-decoration:none; padding:1.25rem; display:flex; align-items:flex-start; gap:0.75rem; transition:transform 0.15s ease;">
+        <span style="font-size:1.75rem;">🗺️</span>
+        <div>
+          <div style="font-weight:700; color:#0f172a; font-size:0.9375rem;">GIS Safety Explorer</div>
+          <div style="font-size:0.8125rem; color:#64748b; margin-top:0.25rem;">Interactive map of police, hospitals, and blackspots.</div>
+        </div>
+      </a>
+
+      <a href="{% url 'maps:safe_routes' %}" class="card" style="text-decoration:none; padding:1.25rem; display:flex; align-items:flex-start; gap:0.75rem; transition:transform 0.15s ease;">
+        <span style="font-size:1.75rem;">🧭</span>
+        <div>
+          <div style="font-weight:700; color:#0f172a; font-size:0.9375rem;">Safe Route Navigator</div>
+          <div style="font-size:0.8125rem; color:#64748b; margin-top:0.25rem;">Illuminated corridors with blackspot evasion.</div>
+        </div>
+      </a>
+
+      <a href="{% url 'incidents:tourist_report' %}" class="card" style="text-decoration:none; padding:1.25rem; display:flex; align-items:flex-start; gap:0.75rem; transition:transform 0.15s ease;">
+        <span style="font-size:1.75rem;">📢</span>
+        <div>
+          <div style="font-weight:700; color:#0f172a; font-size:0.9375rem;">Report Hazard / Incident</div>
+          <div style="font-size:0.8125rem; color:#64748b; margin-top:0.25rem;">Notify tourist police of unlit roads or scams.</div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Live Community Safety & Hazard Reports Section -->
+    <div class="card">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span class="card-title">Live Community Hazards & Incident Log</span>
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.15rem;">Verified reports from tourist safety network & field patrols</div>
+        </div>
+        <a href="{% url 'incidents:incident_feed' %}" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">
+          View All Hazards ({{ recent_incidents|length }}+) &rarr;
+        </a>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        {% for inc in recent_incidents %}
+        <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 200px;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
+              <span class="badge {% if inc.severity == 'CRITICAL' %}badge-critical{% elif inc.severity == 'HIGH' %}badge-high-risk{% else %}badge-warning{% endif %}" style="font-size: 0.6875rem;">
+                {{ inc.get_severity_display }}
+              </span>
+              <span style="font-weight: 700; font-size: 0.875rem; color: #0f172a;">{{ inc.title }}</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b;">
+              📍 {{ inc.location_name|default:"Local Sector Area" }} • Category: <b>{{ inc.get_category_display }}</b> • {{ inc.created_at|date:"M d, H:i" }}
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <a href="{% url 'maps:gis_explorer' %}?lat={{ inc.latitude }}&lng={{ inc.longitude }}" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;">
+              Locate 📍
+            </a>
+            <a href="{% url 'incidents:incident_detail' inc.incident_id %}" class="btn btn-primary btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;">
+              Details 🔎
+            </a>
+          </div>
+        </div>
+        {% empty %}
+        <div style="padding: 1.5rem; text-align: center; color: #64748b; font-size: 0.8125rem;">
+          No active community hazards reported in this sector.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Column: Tactile SOS Trigger & Digital ID Preview -->
+  <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+    <!-- Tactile Emergency SOS Trigger -->
+    <div class="card" style="border-top: 4px solid #ef4444;">
+      <div class="card-header">
+        <span class="card-title">Emergency Response</span>
+        <span class="badge badge-critical">POLICE & EMS 24x7</span>
+      </div>
+      <div class="card-body" style="text-align: center;">
+        <p style="font-size: 0.8125rem; color: #64748b; margin-bottom: 1.25rem;">
+          In an immediate threat, press the button below. Dispatches nearest PCR patrol van and alerts emergency contacts.
+        </p>
+
+        <button class="sos-trigger-btn js-sos-trigger" id="main-sos-btn">
+          <span>🚨</span>
+          <span>TRIGGER SOS EMERGENCY</span>
+        </button>
+
+        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 1rem;">
+          Includes 5-second buffer to cancel false triggers.
+        </div>
+      </div>
+    </div>
+
+    <!-- Digital Tourist ID Snapshot -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Digital Tourist ID</span>
+        <span class="badge badge-safe">ACTIVE</span>
+      </div>
+      <div class="card-body">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="width: 70px; height: 70px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            {% if digital_id and digital_id.qr_code_image %}
+            <img src="{{ digital_id.qr_code_image.url }}" alt="QR" style="width: 100%; height: 100%; object-fit: contain;">
+            {% else %}
+            <span style="font-size: 1.5rem;">🪪</span>
+            {% endif %}
+          </div>
+          <div>
+            <div style="font-family: var(--font-mono); font-weight: 700; font-size: 0.9375rem; color: #1e3a8a;">
+              {{ digital_id.id_number|default:"VGL-2026-ACTIVE" }}
+            </div>
+            <div style="font-size: 0.8125rem; color: #475569; margin-top: 0.2rem;">
+              {{ user.get_full_name|default:user.username }} • {{ profile.nationality }}
+            </div>
+            <div style="font-size: 0.75rem; color: #dc2626; font-weight: 600; margin-top: 0.2rem;">
+              Blood Group: {{ profile.blood_group|default:"O+" }}
+            </div>
+          </div>
+        </div>
+        <a href="{% url 'digital_id:tourist_id_card' %}" class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 1rem; justify-content: center;">
+          Open 3D Flip Card & QR Token &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- City & Place Safety Intelligence Hub -->
+    <div class="card" style="border-left: 4px solid #38bdf8;">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="card-title" style="font-size:0.875rem;">City & Place Safety Guide</span>
+        <span class="badge badge-safe" style="font-size:0.6875rem;">6 MAJOR CITIES</span>
+      </div>
+      <div class="card-body" style="padding:1rem;">
+        <p style="font-size:0.8125rem; color:#64748b; margin-bottom:0.75rem; line-height:1.4;">
+          Search tourist places and safety ratings across <b>Mumbai, Delhi, Noida, Jaipur, Agra, and Goa</b> with active PCR patrols and restricted zones.
+        </p>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-bottom:0.85rem;">
+          <span class="badge badge-secondary" style="font-size:0.6875rem;">🏙️ Mumbai</span>
+          <span class="badge badge-secondary" style="font-size:0.6875rem;">🏛️ Delhi</span>
+          <span class="badge badge-secondary" style="font-size:0.6875rem;">🏢 Noida</span>
+          <span class="badge badge-secondary" style="font-size:0.6875rem;">🏰 Jaipur</span>
+          <span class="badge badge-secondary" style="font-size:0.6875rem;">🕌 Agra</span>
+          <span class="badge badge-secondary" style="font-size:0.6875rem;">🏖️ Goa</span>
+        </div>
+        <a href="{% url 'maps:place_safety_explorer' %}" class="btn btn-primary btn-sm" style="width:100%; justify-content:center; font-weight:700;">
+          <span>🔍</span> Explore Place Safety Data &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- Primary Emergency Contacts -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Emergency Contacts</span>
+        <a href="{% url 'accounts:profile_management' %}" style="font-size: 0.75rem; color: #2563eb;">Manage</a>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        {% for contact in emergency_contacts %}
+        <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600; font-size: 0.875rem; color: #0f172a;">{{ contact.name }}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">{{ contact.relationship }}</div>
+          </div>
+          <a href="tel:{{ contact.phone_number }}" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+            📞 Call
+          </a>
+        </div>
+        {% empty %}
+        <div style="padding: 1rem; text-align: center; color: #64748b; font-size: 0.8125rem;">
+          No contacts added. <a href="{% url 'accounts:profile_management' %}">Add now</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

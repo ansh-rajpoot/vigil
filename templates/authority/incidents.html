@@ -1,0 +1,191 @@
+{% extends 'base_c2.html' %}
+
+{% block title %}Incident Triage & Management — VIGIL C2{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem; flex: 1; overflow-y: auto; background: #090d16;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+      <h1 style="font-size:1.5rem; font-weight:700; color:#f8fafc;">Incident Triage & Investigation Desk</h1>
+      <p style="font-size:0.875rem; color:#94a3b8;">Manage incoming citizen & tourist safety reports, verify credibility, and assign field responders.</p>
+    </div>
+    <a href="{% url 'dashboard:c2_command' %}" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">&larr; Back to Tactical Map</a>
+  </div>
+
+  <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+    <div class="card-header" style="background:#131d33; border-color:#24324d;">
+      <span class="card-title" style="color:#f8fafc;">All Active Incident Records</span>
+    </div>
+
+    <div class="card-body" style="padding:0; overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.875rem; text-align:left;">
+        <thead>
+          <tr style="border-bottom:1px solid #24324d; color:#94a3b8; font-size:0.75rem; text-transform:uppercase;">
+            <th style="padding:0.75rem 1rem;">Case ID</th>
+            <th style="padding:0.75rem 1rem;">Category</th>
+            <th style="padding:0.75rem 1rem;">Headline / Location</th>
+            <th style="padding:0.75rem 1rem;">Severity</th>
+            <th style="padding:0.75rem 1rem;">Status</th>
+            <th style="padding:0.75rem 1rem;">Assigned Unit</th>
+            <th style="padding:0.75rem 1rem;">Reported</th>
+            <th style="padding:0.75rem 1rem;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inc in incidents %}
+          <tr style="border-bottom:1px solid #1e293b;">
+            <td style="padding:0.75rem 1rem; font-family:monospace; color:#38bdf8; font-weight:600;">{{ inc.incident_id }}</td>
+            <td style="padding:0.75rem 1rem;">{{ inc.get_category_display }}</td>
+            <td style="padding:0.75rem 1rem;">
+              <div style="font-weight:600; color:#f8fafc;">{{ inc.title }}</div>
+              <div style="font-size:0.75rem; color:#94a3b8;">📍 {{ inc.location_name|default:"Goa Region" }}</div>
+            </td>
+            <td style="padding:0.75rem 1rem;">
+              <span class="badge {% if inc.severity == 'CRITICAL' %}badge-critical{% elif inc.severity == 'HIGH' %}badge-high-risk{% else %}badge-warning{% endif %}">
+                {{ inc.get_severity_display }}
+              </span>
+            </td>
+            <td style="padding:0.75rem 1rem;">
+              <span class="badge {% if inc.status == 'RESOLVED' %}badge-safe{% elif inc.status == 'DISPATCHED' %}badge-warning{% else %}badge-neutral{% endif %}">
+                {{ inc.get_status_display }}
+              </span>
+            </td>
+            <td style="padding:0.75rem 1rem; font-size:0.8125rem;">
+              {% if inc.assigned_responder %}
+              <div style="color:#10b981; font-weight:700; display:flex; align-items:center; gap:0.3rem;">
+                <span>🚔</span>
+                <span>{{ inc.assigned_responder.callsign }}</span>
+              </div>
+              <div style="font-size:0.6875rem; color:#94a3b8;">{{ inc.assigned_responder.officer_in_charge }} ({{ inc.assigned_responder.get_agency_display }})</div>
+              {% else %}
+              <span class="badge badge-warning" style="font-size:0.6875rem;">⚠️ Unassigned</span>
+              {% endif %}
+            </td>
+            <td style="padding:0.75rem 1rem; font-size:0.75rem; color:#94a3b8;">{{ inc.created_at|date:"M d, H:i" }}</td>
+            <td style="padding:0.75rem 1rem;">
+              <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                <button onclick="openTriageModal('{{ inc.incident_id }}', '{{ inc.title|escapejs }}', '{{ inc.status }}', '{{ inc.severity }}', '{{ inc.assigned_responder_id|default:'' }}')" class="btn btn-primary btn-sm" style="padding:0.25rem 0.55rem; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem;">
+                  <span>🚔</span> Assign / Triage
+                </button>
+                <a href="{% url 'dashboard:c2_command' %}?lat={{ inc.latitude }}&lng={{ inc.longitude }}" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem; background:#1e293b; color:#38bdf8; border-color:#334155; text-decoration:none; display:inline-flex; align-items:center;">
+                  Locate 📍
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" style="padding:2rem; text-align:center; color:#64748b;">No incidents recorded in database.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Triage & PCR Dispatch Incident Modal -->
+<div id="modal-incident-triage" style="display:none; position:fixed; inset:0; background:rgba(9,13,22,0.88); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
+  <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; max-width:520px; width:100%; padding:1.5rem; color:#f8fafc; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid #1e293b; padding-bottom:0.75rem;">
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span style="font-size:1.25rem;">🚔</span>
+        <h3 style="font-size:1.125rem; font-weight:700; color:#f8fafc; margin:0;" id="triage-modal-title">Triage & Dispatch PCR</h3>
+      </div>
+      <button onclick="document.getElementById('modal-incident-triage').style.display='none'" style="background:transparent; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
+    </div>
+
+    <form id="form-triage-update">
+      <input type="hidden" id="triage-case-id" value="">
+
+      <div class="form-group">
+        <label class="form-label" style="color:#cbd5e1; font-size:0.75rem;">Assign PCR Patrol Van / Emergency Responder *</label>
+        <select id="triage-responder-select" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155; font-size:0.8125rem;">
+          <option value="">-- No Assigned Unit / Keep Existing --</option>
+          {% for r in responders %}
+          <option value="{{ r.id }}">
+            {% if r.agency == 'AMBULANCE' %}🚑{% elif r.agency == 'BEACH_LIFEGUARD' %}🛟{% elif r.agency == 'TOURISM_POLICE' %}👮{% else %}🚔{% endif %}
+            {{ r.callsign }} ({{ r.get_agency_display }}) • Officer: {{ r.officer_in_charge }} [{{ r.get_status_display }}]
+          </option>
+          {% endfor %}
+        </select>
+        <div style="font-size:0.6875rem; color:#94a3b8; margin-top:0.25rem;">
+          Assigning a PCR Van transitions its status to <b>DISPATCHED</b> and logs the unit callsign in the case investigation record.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="color:#cbd5e1; font-size:0.75rem;">Update Case Status</label>
+        <select id="triage-status-select" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155; font-size:0.8125rem;">
+          {% for code, label in statuses %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="color:#cbd5e1; font-size:0.75rem;">Investigation Notes / Timeline Entry</label>
+        <textarea id="triage-notes" class="form-textarea" rows="2" style="background:#1e293b; color:#f8fafc; border-color:#334155; font-size:0.8125rem;" placeholder="e.g. Unit PCR-01 dispatched to location to secure the perimeter..."></textarea>
+      </div>
+
+      <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.25rem; border-top:1px solid #1e293b; padding-top:0.75rem;">
+        <button type="button" onclick="document.getElementById('modal-incident-triage').style.display='none'" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">Cancel</button>
+        <button type="button" id="btn-save-triage" class="btn btn-primary btn-sm">Dispatch PCR & Update Record 🚀</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openTriageModal(caseId, title, currentStatus, currentSeverity, currentResponderId) {
+  document.getElementById('triage-case-id').value = caseId;
+  document.getElementById('triage-modal-title').innerText = `Triage & Dispatch: ${caseId}`;
+  document.getElementById('triage-status-select').value = currentStatus;
+  document.getElementById('triage-responder-select').value = currentResponderId || '';
+  document.getElementById('triage-notes').value = '';
+  document.getElementById('modal-incident-triage').style.display = 'flex';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saveBtn = document.getElementById('btn-save-triage');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const caseId = document.getElementById('triage-case-id').value;
+      const status = document.getElementById('triage-status-select').value;
+      const responderId = document.getElementById('triage-responder-select').value;
+      const note = document.getElementById('triage-notes').value;
+
+      saveBtn.disabled = true;
+      saveBtn.innerText = 'Dispatching Unit...';
+
+      try {
+        const res = await fetch(`/incidents/api/${caseId}/`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({
+            status: status,
+            assigned_responder_id: responderId ? parseInt(responderId) : null,
+            timeline_note: note
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Dispatch failed: ' + (data.message || JSON.stringify(data.errors)));
+          saveBtn.disabled = false;
+          saveBtn.innerText = 'Dispatch PCR & Update Record 🚀';
+        }
+      } catch (err) {
+        alert('Network error while dispatching PCR van.');
+        saveBtn.disabled = false;
+        saveBtn.innerText = 'Dispatch PCR & Update Record 🚀';
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

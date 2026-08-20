@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report Safety Hazard / Incident — VIGIL{% endblock %}
+
+{% block extra_css %}
+<style>
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .category-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 0.5rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+  .category-chip:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+  .category-chip.selected {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1e3a8a;
+    font-weight: 700;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
+  .category-chip .chip-icon {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+  }
+  .category-chip .chip-label {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 620px; margin: 1rem auto; padding: 0 1rem;">
+
+  <!-- Urgent Emergency Shortcut Banner -->
+  <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <span style="font-size: 1.5rem;">🚨</span>
+      <div>
+        <div style="font-weight: 700; font-size: 0.875rem; color: #991b1b;">Immediate Threat or Medical Emergency?</div>
+        <div style="font-size: 0.75rem; color: #b91c1c;">Use instant SOS for automatic PCR patrol van dispatch.</div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm js-sos-trigger" style="background: #dc2626; border-color: #dc2626; white-space: nowrap;">
+      Instant SOS
+    </button>
+  </div>
+
+  <!-- Incident Reporting Card -->
+  <div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 0.6875rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Direct to Tourism Police C2 Desk</div>
+        <div style="font-weight: 700; font-size: 1.125rem; color: #0f172a;">File Safety Incident / Hazard Report</div>
+      </div>
+      <span class="badge badge-warning">OFFICIAL LOG</span>
+    </div>
+
+    <div class="card-body">
+      <form method="post" action="{% url 'incidents:tourist_report' %}" enctype="multipart/form-data" id="incident-report-form">
+        {% csrf_token %}
+
+        <!-- STEP 1: Incident Category Selection -->
+        <div style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+          Step 1: Select Incident Category *
+        </div>
+
+        <input type="hidden" name="category" id="selected-category" value="ACCIDENT" required>
+
+        <div class="category-grid">
+          <div class="category-chip selected" data-value="ACCIDENT">
+            <span class="chip-icon">🚗</span>
+            <span class="chip-label">Accident</span>
+          </div>
+          <div class="category-chip" data-value="CRIME">
+            <span class="chip-icon">🚨</span>
+            <span class="chip-label">Crime / Theft</span>
+          </div>
+          <div class="category-chip" data-value="HARASSMENT">
+            <span class="chip-icon">⚠️</span>
+            <span class="chip-label">Harassment</span>
+          </div>
+          <div class="category-chip" data-value="MEDICAL">
+            <span class="chip-icon">🏥</span>
+            <span class="chip-label">Medical</span>
+          </div>
+          <div class="category-chip" data-value="LOST_PERSON">
+            <span class="chip-icon">👤</span>
+            <span class="chip-label">Lost Person</span>
+          </div>
+          <div class="category-chip" data-value="LOST_PROPERTY">
+            <span class="chip-icon">🎒</span>
+            <span class="chip-label">Lost Property</span>
+          </div>
+          <div class="category-chip" data-value="NATURAL_DISASTER">
+            <span class="chip-icon">🌊</span>
+            <span class="chip-label">Natural Hazard</span>
+          </div>
+          <div class="category-chip" data-value="UNSAFE_AREA">
+            <span class="chip-icon">💡</span>
+            <span class="chip-label">Unsafe Area</span>
+          </div>
+          <div class="category-chip" data-value="OTHER">
+            <span class="chip-icon">📝</span>
+            <span class="chip-label">Other</span>
+          </div>
+        </div>
+
+        <!-- STEP 2: Location & Landmark -->
+        <div style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+          Step 2: Location & Street Landmark *
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
+            <label class="form-label" for="location_name" style="margin-bottom: 0;">Landmark / Street Description *</label>
+            <button type="button" id="btn-use-gps" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.6875rem; background:#f1f5f9; color:#1e3a8a;">
+              📍 Use My GPS
+            </button>
+          </div>
+          <input type="text" id="location_name" name="location_name" class="form-input" placeholder="e.g. Near Baga Bridge Shack #4, Calangute" required>
+        </div>
+
+        <!-- Interactive Map Coordinate Picker -->
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.6875rem; color: #64748b; margin-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center;">
+            <span>Click map or drag pin to position exact hazard:</span>
+            <span id="coords-display" style="font-family: var(--font-mono); font-weight: 600; color: #2563eb;">15.4989° N, 73.8278° E</span>
+          </div>
+          <div id="report-map-picker" style="height: 190px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; overflow: hidden;"></div>
+        </div>
+
+        <!-- Hidden GPS values (auto populated) -->
+        <input type="hidden" id="incident_lat" name="latitude" value="15.4989">
+        <input type="hidden" id="incident_lng" name="longitude" value="73.8278">
+
+        <!-- STEP 3: Details & Optional Evidence -->
+        <div style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+          Step 3: Brief Details & Optional Photo Evidence
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="title">Title / Headline</label>
+          <input type="text" id="title" name="title" class="form-input" placeholder="e.g. Unlit road with broken streetlight near beach alley">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Detailed Description *</label>
+          <textarea id="description" name="description" class="form-textarea" rows="3" placeholder="Provide details to assist police & rescue operators..." required></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="severity">Severity</label>
+            <select id="severity" name="severity" class="form-select">
+              <option value="LOW">Low Priority</option>
+              <option value="MEDIUM" selected>Medium Priority</option>
+              <option value="HIGH">High Priority</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="evidence_image">Upload Photo Evidence</label>
+            <input type="file" id="evidence_image" name="evidence_image" class="form-input" accept="image/*,video/*" style="padding: 0.35rem 0.5rem; font-size: 0.75rem;">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 0.9375rem; justify-content: center;">
+          Submit Incident Report to Police
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Category Chips Selector
+  const chips = document.querySelectorAll('.category-chip');
+  const catInput = document.getElementById('selected-category');
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      if (catInput) {
+        catInput.value = chip.getAttribute('data-value');
+      }
+    });
+  });
+
+  // Interactive Leaflet Map Coordinate Picker
+  let lat = 15.4989;
+  let lng = 73.8278;
+  const latInp = document.getElementById('incident_lat');
+  const lngInp = document.getElementById('incident_lng');
+  const coordsDisp = document.getElementById('coords-display');
+
+  if (typeof L !== 'undefined' && document.getElementById('report-map-picker')) {
+    const map = L.map('report-map-picker', {
+      center: [lat, lng],
+      zoom: 13,
+      zoomControl: true
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+
+    const pinIcon = L.divIcon({
+      className: 'custom-pin',
+      html: `<div style="width:26px; height:26px; background:#ea580c; border-radius:50%; border:2px solid #ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; font-size:12px;">📍</div>`,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13]
+    });
+
+    const marker = L.marker([lat, lng], { draggable: true, icon: pinIcon }).addTo(map);
+
+    function updateCoords(newLat, newLng) {
+      latInp.value = newLat.toFixed(6);
+      lngInp.value = newLng.toFixed(6);
+      if (coordsDisp) coordsDisp.innerText = `${newLat.toFixed(4)}° N, ${newLng.toFixed(4)}° E`;
+    }
+
+    marker.on('dragend', (e) => {
+      const pos = e.target.getLatLng();
+      updateCoords(pos.lat, pos.lng);
+    });
+
+    map.on('click', (e) => {
+      marker.setLatLng(e.latlng);
+      updateCoords(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Use My GPS button
+    const gpsBtn = document.getElementById('btn-use-gps');
+    if (gpsBtn) {
+      gpsBtn.addEventListener('click', () => {
+        gpsBtn.innerText = 'Acquiring GPS...';
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const uLat = pos.coords.latitude;
+              const uLng = pos.coords.longitude;
+              marker.setLatLng([uLat, uLng]);
+              map.flyTo([uLat, uLng], 15);
+              updateCoords(uLat, uLng);
+              gpsBtn.innerText = '📍 GPS Locked';
+              gpsBtn.style.color = '#059669';
+            },
+            (err) => {
+              gpsBtn.innerText = '📍 Default GPS';
+              alert('Could not acquire current GPS location. You can click on the map to place the hazard pin.');
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+          );
+        }
+      });
+    }
+  }
+});
+</script>
+{% endblock %}

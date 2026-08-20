@@ -1,0 +1,96 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{% block title %}VIGIL — Smart Tourist Safety & Incident Response System{% endblock %}</title>
+
+  <!-- GovTech & Public Safety Design System -->
+  <link rel="stylesheet" href="{% static 'css/design_system.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tourist.css' %}">
+  <link rel="stylesheet" href="{% static 'css/leaflet_custom.css' %}">
+
+  <!-- Leaflet GIS CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="tourist-layout">
+
+  <!-- Reusable Masthead Component -->
+  {% include 'components/masthead.html' %}
+
+  <!-- Reusable Tourist Top Navigation Component -->
+  {% include 'components/navbar.html' %}
+
+  <!-- Flash Messages -->
+  {% if messages %}
+  <div style="max-width:1200px; width:100%; margin:1rem auto 0 auto; padding:0 1rem;">
+    {% for message in messages %}
+    <div class="alert-banner {% if message.tags == 'error' %}alert-banner-critical{% elif message.tags == 'success' %}alert-banner-safe{% else %}alert-banner-warning{% endif %}">
+      <span>{% if message.tags == 'error' %}⚠️{% elif message.tags == 'success' %}✅{% else %}ℹ️{% endif %}</span>
+      <div>{{ message }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Main Body Content -->
+  <main class="tourist-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Reusable Footer Component -->
+  {% include 'components/footer.html' %}
+
+  <!-- Mobile Bottom Navigation (PWA Shell) -->
+  {% if user.is_authenticated %}
+  <div class="tourist-bottom-nav">
+    <a href="{% url 'tourists:home' %}" class="bnav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+      <span style="font-size:1.1rem;">🏠</span>
+      <span>Home</span>
+    </a>
+    <a href="{% url 'digital_id:tourist_id_card' %}" class="bnav-item {% if request.resolver_match.url_name == 'tourist_id_card' %}active{% endif %}">
+      <span style="font-size:1.1rem;">🪪</span>
+      <span>Digital ID</span>
+    </a>
+    <a href="#" class="bnav-item bnav-sos js-sos-trigger" id="mobile-sos-btn">
+      <span>SOS</span>
+    </a>
+    <a href="{% url 'maps:safe_routes' %}" class="bnav-item {% if request.resolver_match.url_name == 'safe_routes' %}active{% endif %}">
+      <span style="font-size:1.1rem;">🗺️</span>
+      <span>Safe Nav</span>
+    </a>
+    <a href="{% url 'tourists:profile' %}" class="bnav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+      <span style="font-size:1.1rem;">👤</span>
+      <span>Profile</span>
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- SOS Panic Countdown Modal -->
+  <div id="sos-countdown-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:1.5rem;">
+    <div style="background:#ffffff; max-width:400px; width:100%; border-radius:12px; padding:2rem; text-align:center; border:2px solid #ef4444; box-shadow:0 20px 40px rgba(0,0,0,0.3);">
+      <div style="font-size:3rem; margin-bottom:0.5rem;">🚨</div>
+      <h2 style="font-size:1.25rem; font-weight:700; color:#dc2626; margin-bottom:0.5rem;">EMERGENCY SOS TRIGGERED</h2>
+      <p style="font-size:0.875rem; color:#475569; margin-bottom:1.5rem;">Alerting Tourism Police, Nearest Patrols, and Emergency Responders in:</p>
+
+      <div id="sos-count-num" style="font-family:var(--font-mono); font-size:4rem; font-weight:800; color:#dc2626; line-height:1; margin-bottom:1.5rem;">5</div>
+
+      <div style="display:flex; flex-direction:column; gap:0.75rem;">
+        <button id="sos-cancel-countdown-btn" class="btn btn-secondary" style="width:100%; font-weight:600; padding:0.75rem;">Cancel False Alarm</button>
+        <button id="sos-instant-confirm-btn" class="btn btn-danger" style="width:100%; font-weight:600; padding:0.75rem;">Confirm & Send Beacon Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet GIS JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Core Scripts -->
+  <script src="{% static 'js/location_service.js' %}"></script>
+  <script src="{% static 'js/tourist_app.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,271 @@
+{% extends 'base_c2.html' %}
+{% load static %}
+
+{% block title %}CCTV Crowd Density & Optical Telemetry — VIGIL C2{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem; flex: 1; overflow-y: auto; background: #090d16;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+      <h1 style="font-size:1.5rem; font-weight:700; color:#f8fafc;">CCTV Crowd Density & Capacity Monitoring</h1>
+      <p style="font-size:0.875rem; color:#94a3b8;">Real-time occupancy estimation, crowd density scoring (0–100), spatial concentration bottlenecks, and surge velocity detection.</p>
+    </div>
+    <a href="{% url 'dashboard:c2_command' %}" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">&larr; Back to Tactical Map</a>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 420px; gap:1.5rem; align-items:start;">
+
+    <!-- Left: CCTV Camera Sectors Grid & Live Feeds -->
+    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1rem;">
+        {% for feed in feeds %}
+        <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+          <div class="card-header" style="background:#131d33; border-color:#24324d; padding:0.6rem 1rem;">
+            <div>
+              <div style="font-weight:700; font-size:0.875rem; color:#38bdf8;">{{ feed.camera_code }}</div>
+              <div style="font-size:0.6875rem; color:#94a3b8;">{{ feed.location_name }} • {{ feed.zone.name|default:"Coastal Sector" }}</div>
+            </div>
+            <span class="badge badge-safe">ACTIVE</span>
+          </div>
+
+          <div class="card-body" style="padding:0.75rem;">
+            <!-- CCTV Frame Mount -->
+            <div style="width:100%; height:180px; background:#060a12; border-radius:6px; border:1px solid #1e293b; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;" id="cctv-frame-{{ feed.id }}">
+              {% with feed.detections.first as latest %}
+              {% if latest and latest.annotated_frame %}
+              <img src="{{ latest.annotated_frame.url }}" alt="Annotated Feed" style="width:100%; height:100%; object-fit:cover;">
+              {% elif feed.sample_frame %}
+              <img src="{{ feed.sample_frame.url }}" alt="CCTV Sample" style="width:100%; height:100%; object-fit:cover;">
+              {% else %}
+              <div style="text-align:center; color:#64748b;">
+                <div style="font-size:1.75rem;">📹</div>
+                <div style="font-size:0.75rem;">OPTICAL FEED READY</div>
+              </div>
+              {% endif %}
+              {% endwith %}
+
+              <div style="position:absolute; bottom:6px; left:8px; font-family:monospace; font-size:0.6875rem; background:rgba(0,0,0,0.75); padding:2px 6px; border-radius:3px; color:#f8fafc;">
+                AREA: {{ feed.coverage_area_sqm|floatformat:0 }} m² | SAFE CAP: {{ feed.max_safe_capacity }}
+              </div>
+            </div>
+
+            <!-- Telemetry Metrics Grid -->
+            {% with feed.detections.first as latest %}
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; margin-top:0.75rem; background:#131d33; padding:0.5rem; border-radius:4px; border:1px solid #24324d;">
+              <div>
+                <div style="font-size:0.625rem; color:#94a3b8; text-transform:uppercase;">Count</div>
+                <div style="font-weight:700; font-size:0.9375rem; color:#f8fafc;" id="feed-count-{{ feed.id }}">{{ latest.crowd_count|default:"18" }} ppl</div>
+              </div>
+              <div>
+                <div style="font-size:0.625rem; color:#94a3b8; text-transform:uppercase;">Density Score</div>
+                <div style="font-weight:700; font-size:0.9375rem; color:#38bdf8;" id="feed-score-{{ feed.id }}">{{ latest.crowd_density_score|default:"22.5"|floatformat:0 }}/100</div>
+              </div>
+              <div>
+                <div style="font-size:0.625rem; color:#94a3b8; text-transform:uppercase;">Density Tier</div>
+                <div style="font-weight:700; font-size:0.75rem; color:#10b981;" id="feed-tier-{{ feed.id }}">{{ latest.get_density_tier_display|default:"Optimal" }}</div>
+              </div>
+            </div>
+            {% endwith %}
+
+            <div style="display:flex; justify-content:flex-end; margin-top:0.75rem;">
+              <button onclick="triggerOpticalAnalysis({{ feed.id }})" class="btn btn-primary btn-sm" style="font-size:0.75rem; padding:0.35rem 0.75rem;">
+                Run Frame Analysis ⚡
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Recent Optical Detection Logs Table -->
+      <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+        <div class="card-header" style="background:#131d33; border-color:#24324d;">
+          <span class="card-title" style="color:#f8fafc;">Optical Density Log & Anomaly Audit Trail</span>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.8125rem; text-align:left;">
+            <thead>
+              <tr style="border-bottom:1px solid #24324d; color:#94a3b8; font-size:0.6875rem; text-transform:uppercase;">
+                <th style="padding:0.6rem 1rem;">Time</th>
+                <th style="padding:0.6rem 1rem;">Camera</th>
+                <th style="padding:0.6rem 1rem;">Sector / Zone</th>
+                <th style="padding:0.6rem 1rem;">Count</th>
+                <th style="padding:0.6rem 1rem;">Density Score</th>
+                <th style="padding:0.6rem 1rem;">Surge Rate</th>
+                <th style="padding:0.6rem 1rem;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="detection-log-body">
+              {% for d in recent_detections %}
+              <tr style="border-bottom:1px solid #1e293b;">
+                <td style="padding:0.6rem 1rem; color:#94a3b8;">{{ d.timestamp|date:"H:i:s" }}</td>
+                <td style="padding:0.6rem 1rem; font-weight:600; color:#38bdf8;">{{ d.camera.camera_code }}</td>
+                <td style="padding:0.6rem 1rem; color:#cbd5e1;">{{ d.camera.zone.name|default:d.camera.location_name }}</td>
+                <td style="padding:0.6rem 1rem; font-weight:700;">{{ d.crowd_count }}</td>
+                <td style="padding:0.6rem 1rem; font-weight:700; color:#38bdf8;">{{ d.crowd_density_score|floatformat:0 }}/100</td>
+                <td style="padding:0.6rem 1rem; color:#94a3b8;">+{{ d.surge_rate_per_min|floatformat:1 }}/min</td>
+                <td style="padding:0.6rem 1rem;">
+                  {% if d.anomaly_detected != 'NONE' %}
+                  <span style="color:#ef4444; font-weight:700;">⚠️ {{ d.get_anomaly_detected_display }}</span>
+                  {% else %}
+                  <span style="color:#10b981;">Normal</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" style="padding:1.5rem; text-align:center; color:#64748b;">No optical logs recorded yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Optical Upload & Custom Threshold Inspector -->
+    <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+      <div class="card-header" style="background:#131d33; border-color:#24324d;">
+        <span class="card-title" style="color:#f8fafc;">Optical Frame Inspector & Upload</span>
+      </div>
+      <div class="card-body">
+        <form id="optical-upload-form" onsubmit="handleManualFrameUpload(event)">
+          <div class="form-group">
+            <label class="form-label" style="color:#94a3b8;">Target Camera Sector</label>
+            <select class="form-select" id="inspect-camera-select" style="background:#1e293b; color:#f8fafc; border-color:#334155;">
+              {% for feed in feeds %}
+              <option value="{{ feed.id }}">{{ feed.camera_code }} ({{ feed.location_name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="color:#94a3b8;">Upload High-Resolution CCTV Snapshot</label>
+            <input type="file" id="inspect-file-input" class="form-input" accept="image/*" style="background:#1e293b; color:#f8fafc; border-color:#334155; padding:0.4rem;">
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;">
+            Process Optical Telemetry
+          </button>
+        </form>
+
+        <!-- Live Inspection Results Box -->
+        <div id="inspect-results-box" style="display:none; margin-top:1.25rem; background:#131d33; border:1px solid #24324d; border-radius:6px; padding:0.85rem;">
+          <div style="font-size:0.6875rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:0.5rem;">Analysis Telemetry</div>
+          
+          <div style="width:100%; height:180px; background:#060a12; border-radius:4px; margin-bottom:0.75rem; overflow:hidden;">
+            <img id="inspect-annotated-img" src="" style="width:100%; height:100%; object-fit:contain;">
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.8125rem;">
+            <div>
+              <span style="color:#94a3b8;">People Detected:</span>
+              <b id="res-count" style="color:#f8fafc;">0</b>
+            </div>
+            <div>
+              <span style="color:#94a3b8;">Density Score:</span>
+              <b id="res-score" style="color:#38bdf8;">0/100</b>
+            </div>
+            <div>
+              <span style="color:#94a3b8;">Surge Rate:</span>
+              <b id="res-surge" style="color:#f8fafc;">0/min</b>
+            </div>
+            <div>
+              <span style="color:#94a3b8;">Concentration:</span>
+              <b id="res-conc" style="color:#f8fafc;">0.0</b>
+            </div>
+          </div>
+
+          <div style="margin-top:0.5rem; font-size:0.75rem; color:#cbd5e1;" id="res-notes"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function triggerOpticalAnalysis(cameraId) {
+  try {
+    const res = await fetch('/ai-services/api/analyze-frame/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ camera_id: cameraId })
+    });
+    const data = await res.json();
+    if (data.success && data.data) {
+      const d = data.data;
+      document.getElementById(`feed-count-${cameraId}`).innerText = `${d.crowd_count} ppl`;
+      document.getElementById(`feed-score-${cameraId}`).innerText = `${Math.round(d.crowd_density_score)}/100`;
+      document.getElementById(`feed-tier-${cameraId}`).innerText = d.density_tier_display;
+
+      if (d.annotated_frame) {
+        const mount = document.getElementById(`cctv-frame-${cameraId}`);
+        if (mount) {
+          mount.innerHTML = `<img src="${d.annotated_frame}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
+      }
+
+      // Prepend to audit log table
+      const tbody = document.getElementById('detection-log-body');
+      if (tbody) {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #1e293b';
+        tr.innerHTML = `
+          <td style="padding:0.6rem 1rem; color:#94a3b8;">Just Now</td>
+          <td style="padding:0.6rem 1rem; font-weight:600; color:#38bdf8;">${d.camera_code}</td>
+          <td style="padding:0.6rem 1rem; color:#cbd5e1;">${d.zone_name || d.location_name}</td>
+          <td style="padding:0.6rem 1rem; font-weight:700;">${d.crowd_count}</td>
+          <td style="padding:0.6rem 1rem; font-weight:700; color:#38bdf8;">${Math.round(d.crowd_density_score)}/100</td>
+          <td style="padding:0.6rem 1rem; color:#94a3b8;">+${d.surge_rate_per_min}/min</td>
+          <td style="padding:0.6rem 1rem;">${d.anomaly_detected !== 'NONE' ? '<span style="color:#ef4444; font-weight:700;">⚠️ ' + d.anomaly_display + '</span>' : '<span style="color:#10b981;">Normal</span>'}</td>
+        `;
+        tbody.insertBefore(tr, tbody.firstChild);
+      }
+    }
+  } catch (err) {
+    console.error('Optical analysis trigger error:', err);
+  }
+}
+
+async function handleManualFrameUpload(e) {
+  e.preventDefault();
+  const cameraId = document.getElementById('inspect-camera-select').value;
+  const fileInput = document.getElementById('inspect-file-input');
+
+  const formData = new FormData();
+  formData.append('camera_id', cameraId);
+  if (fileInput.files.length > 0) {
+    formData.append('frame_image', fileInput.files[0]);
+  }
+
+  try {
+    const res = await fetch('/ai-services/api/analyze-frame/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+      body: formData
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      const d = json.data;
+      const box = document.getElementById('inspect-results-box');
+      box.style.display = 'block';
+      document.getElementById('res-count').innerText = `${d.crowd_count} occupants`;
+      document.getElementById('res-score').innerText = `${Math.round(d.crowd_density_score)}/100 (${d.density_tier_display})`;
+      document.getElementById('res-surge').innerText = `+${d.surge_rate_per_min}/min`;
+      document.getElementById('res-conc').innerText = `${d.concentration_index}`;
+      document.getElementById('res-notes').innerText = d.notes;
+
+      if (d.annotated_frame) {
+        document.getElementById('inspect-annotated-img').src = d.annotated_frame;
+      }
+    }
+  } catch (err) {
+    console.error('Inspection upload error:', err);
+  }
+}
+</script>
+{% endblock %}

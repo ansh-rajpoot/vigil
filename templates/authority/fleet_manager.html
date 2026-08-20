@@ -1,0 +1,633 @@
+{% extends 'base_c2.html' %}
+{% load static %}
+
+{% block title %}VIGIL C2 - Emergency Fleet & PCR Van Management{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; height: calc(100vh - 58px); overflow: hidden; background: #0b1120;">
+
+  <!-- Fleet Telemetry KPI Header -->
+  <div style="background: #0f172a; border-bottom: 1px solid #1e293b; padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.5rem;">🚔</span>
+        <div>
+          <h2 style="font-size: 1.125rem; font-weight: 700; color: #f8fafc; margin: 0;">PCR Van & Responder Fleet Command</h2>
+          <div style="font-size: 0.6875rem; color: #94a3b8;">Real-Time GPS Telemetry, Rapid Dispatch & Unit Provisioning</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <div style="background: #1e293b; padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid #334155; font-size: 0.75rem;">
+          <span style="color: #94a3b8;">Total Fleet:</span>
+          <b style="color: #f8fafc; margin-left: 0.25rem;" id="kpi-total-units">{{ total_units }}</b>
+        </div>
+        <div style="background: rgba(16,185,129,0.1); padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3); font-size: 0.75rem;">
+          <span style="color: #6ee7b7;">Available:</span>
+          <b style="color: #10b981; margin-left: 0.25rem;" id="kpi-available-units">{{ available_units }}</b>
+        </div>
+        <div style="background: rgba(56,189,248,0.1); padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid rgba(56,189,248,0.3); font-size: 0.75rem;">
+          <span style="color: #7dd3fc;">Dispatched / On Scene:</span>
+          <b style="color: #38bdf8; margin-left: 0.25rem;" id="kpi-dispatched-units">{{ dispatched_units }}</b>
+        </div>
+        <div style="background: rgba(239,68,68,0.1); padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid rgba(239,68,68,0.3); font-size: 0.75rem;">
+          <span style="color: #fca5a5;">Off Duty:</span>
+          <b style="color: #ef4444; margin-left: 0.25rem;" id="kpi-offduty-units">{{ off_duty_units }}</b>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button onclick="openRegisterModal()" class="btn btn-primary btn-sm" style="font-size: 0.8125rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>➕</span> Register New PCR Van
+      </button>
+      <a href="{% url 'dashboard:c2_command' %}" class="btn btn-secondary btn-sm" style="font-size: 0.8125rem; background: #1e293b; color: #f8fafc; border-color: #334155;">
+        Tactical GIS Desk &rarr;
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Multi-Pane Fleet Workspace -->
+  <div style="display: grid; grid-template-columns: 1fr 440px; flex: 1; overflow: hidden; position: relative;" id="fleet-workspace-grid">
+
+    <!-- Left Pane: Interactive Live Fleet GIS Map -->
+    <div style="position: relative; width: 100%; height: 100%; background: #0b1120;">
+      <div id="fleet-live-map" style="width: 100%; height: 100%;"></div>
+
+      <!-- Map Floating Filters -->
+      <div style="position: absolute; top: 1rem; left: 1rem; z-index: 1000; background: rgba(15,23,42,0.92); backdrop-filter: blur(8px); border: 1px solid #334155; border-radius: 8px; padding: 0.6rem 0.85rem; display: flex; flex-direction: column; gap: 0.4rem; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+        <div style="font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Live Fleet Filter</div>
+        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+          <button onclick="filterFleet('ALL')" class="fleet-filter-chip active" data-filter="ALL">All Units</button>
+          <button onclick="filterFleet('POLICE')" class="fleet-filter-chip" data-filter="POLICE">🚔 Police</button>
+          <button onclick="filterFleet('TOURISM_POLICE')" class="fleet-filter-chip" data-filter="TOURISM_POLICE">👮 Tourist Police</button>
+          <button onclick="filterFleet('AMBULANCE')" class="fleet-filter-chip" data-filter="AMBULANCE">🚑 EMS 108</button>
+          <button onclick="filterFleet('BEACH_LIFEGUARD')" class="fleet-filter-chip" data-filter="BEACH_LIFEGUARD">🛟 Lifeguard</button>
+        </div>
+      </div>
+
+      <!-- Quick Map Action Floating Tools -->
+      <div style="position: absolute; bottom: 1.5rem; left: 1rem; z-index: 1000; display: flex; gap: 0.5rem;">
+        <button onclick="fitAllUnits()" class="btn btn-secondary btn-sm" style="background: rgba(15,23,42,0.9); color: #38bdf8; border-color: #334155; font-size: 0.75rem;">
+          🗺️ Focus All Units
+        </button>
+        <button onclick="simulatePatrolPulse()" class="btn btn-secondary btn-sm" style="background: rgba(15,23,42,0.9); color: #10b981; border-color: #334155; font-size: 0.75rem;">
+          ⚡ Live GPS Pulse
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Pane: Fleet Roster & Live Controls -->
+    <div style="background: #0f172a; border-left: 1px solid #1e293b; display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+      <div style="padding: 0.85rem 1rem; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; font-size: 0.875rem; color: #f8fafc; text-transform: uppercase;">Active Fleet Roster ({{ responders|length }})</span>
+        <span style="font-size: 0.6875rem; color: #10b981; font-weight: 600;">● LIVE TELEMETRY</span>
+      </div>
+
+      <div style="flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem;" id="fleet-roster-list">
+        {% for unit in responders %}
+        <div class="fleet-unit-card" id="unit-card-{{ unit.id }}" data-agency="{{ unit.agency }}" data-lat="{{ unit.current_latitude }}" data-lng="{{ unit.current_longitude }}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem;">
+            <div>
+              <span style="font-family: var(--font-mono); font-size: 0.6875rem; color: #94a3b8;">{{ unit.unit_code }}</span>
+              <div style="font-weight: 700; font-size: 0.9375rem; color: #f8fafc; margin-top: 0.1rem;">
+                {% if unit.agency == 'AMBULANCE' %}🚑{% elif unit.agency == 'BEACH_LIFEGUARD' %}🛟{% elif unit.agency == 'TOURISM_POLICE' %}👮{% elif unit.agency == 'FIRE_RESCUE' %}🚒{% else %}🚔{% endif %}
+                {{ unit.callsign }}
+              </div>
+            </div>
+            <span class="badge {% if unit.status == 'AVAILABLE' %}badge-safe{% elif unit.status == 'DISPATCHED' or unit.status == 'ON_SCENE' %}badge-high-risk{% else %}badge-critical{% endif %}" style="font-size: 0.6875rem;" id="unit-badge-{{ unit.id }}">
+              {{ unit.get_status_display }}
+            </span>
+          </div>
+
+          <div style="font-size: 0.75rem; color: #cbd5e1; display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; margin-bottom: 0.4rem;">
+            <div>👤 <b>{{ unit.officer_in_charge }}</b></div>
+            <div>📞 <b>{{ unit.contact_number }}</b></div>
+            <div>📍 <span id="unit-coords-{{ unit.id }}" style="font-family: monospace;">{{ unit.current_latitude|floatformat:4 }}, {{ unit.current_longitude|floatformat:4 }}</span></div>
+            <div>🏢 {{ unit.station_base_name|default:"Goa Sector Post" }}</div>
+          </div>
+
+          <!-- Unit Actions -->
+          <div style="display: flex; gap: 0.35rem; align-items: center; border-top: 1px solid #334155; padding-top: 0.4rem; justify-content: flex-end; flex-wrap: wrap;">
+            <!-- Status Dropdown -->
+            <select onchange="updateUnitStatus({{ unit.id }}, this.value)" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 4px; font-size: 0.6875rem; padding: 0.2rem 0.4rem;">
+              <option value="AVAILABLE" {% if unit.status == 'AVAILABLE' %}selected{% endif %}>Available</option>
+              <option value="DISPATCHED" {% if unit.status == 'DISPATCHED' %}selected{% endif %}>Dispatched</option>
+              <option value="ON_SCENE" {% if unit.status == 'ON_SCENE' %}selected{% endif %}>On Scene</option>
+              <option value="OFF_DUTY" {% if unit.status == 'OFF_DUTY' %}selected{% endif %}>Off Duty</option>
+            </select>
+
+            <button onclick="openLiveLocationModal({{ unit.id }}, '{{ unit.callsign|escapejs }}', {{ unit.current_latitude }}, {{ unit.current_longitude }})" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.45rem; background: #1e293b; color: #38bdf8; border-color: #334155;">
+              Update GPS 📍
+            </button>
+            <button onclick="locateUnitOnMap({{ unit.current_latitude }}, {{ unit.current_longitude }}, '{{ unit.callsign|escapejs }}')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.45rem; background: #1e293b; color: #10b981; border-color: #334155;">
+              Focus 🎯
+            </button>
+          </div>
+        </div>
+        {% empty %}
+        <div style="padding: 2rem; text-align: center; color: #64748b; font-size: 0.8125rem;">
+          No responder units registered. Click "Register New PCR Van" above.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: Register New PCR Van / Responder Unit -->
+<!-- ========================================================================= -->
+<div id="modal-register-pcr" style="display: none; position: fixed; inset: 0; background: rgba(9, 13, 22, 0.88); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; max-width: 560px; width: 100%; padding: 1.5rem; color: #f8fafc; max-height: 90vh; overflow-y: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.25rem;">🚔</span>
+        <h3 style="font-size: 1.125rem; font-weight: 700; color: #f8fafc; margin: 0;">Register New Responder / PCR Van</h3>
+      </div>
+      <button onclick="closeRegisterModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+
+    <form id="form-register-pcr" onsubmit="handleRegisterPCR(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Unit Code *</label>
+          <input type="text" id="reg-unit-code" class="form-input" required placeholder="e.g. PCR-CALANGUTE-03" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Agency Category *</label>
+          <select id="reg-agency" class="form-select" required style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+            {% for code, label in agency_choices %}
+            <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Vehicle Callsign / Unit Name *</label>
+          <input type="text" id="reg-callsign" class="form-input" required placeholder="e.g. Patrol Unit Calangute 03" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Station / Base Post *</label>
+          <input type="text" id="reg-station" class="form-input" required placeholder="e.g. Calangute Coastal Post" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Officer in Charge *</label>
+          <input type="text" id="reg-officer" class="form-input" required placeholder="e.g. Inspector R. Naik" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Emergency Contact Number *</label>
+          <input type="text" id="reg-phone" class="form-input" required placeholder="e.g. +91 98221 00112" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+      </div>
+
+      <!-- Sector Quick Presets -->
+      <div class="form-group" style="margin-top: 0.25rem;">
+        <label class="form-label" style="color: #94a3b8; font-size: 0.6875rem; text-transform: uppercase;">Quick Deployment Sector Presets</label>
+        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+          <button type="button" onclick="setRegSector(15.5420, 73.7580, 'Calangute Central')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.45rem; background: #1e293b; color: #cbd5e1; border-color: #334155;">Calangute</button>
+          <button type="button" onclick="setRegSector(15.5560, 73.7530, 'Baga Beach Strip')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.45rem; background: #1e293b; color: #cbd5e1; border-color: #334155;">Baga</button>
+          <button type="button" onclick="setRegSector(15.4989, 73.8278, 'Panaji Police HQ')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.45rem; background: #1e293b; color: #cbd5e1; border-color: #334155;">Panaji</button>
+          <button type="button" onclick="setRegSector(15.5800, 73.7400, 'Anjuna Cliff Perimeter')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.45rem; background: #1e293b; color: #cbd5e1; border-color: #334155;">Anjuna</button>
+          <button type="button" onclick="setRegSector(15.2750, 73.9100, 'Colva South Sector')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.45rem; background: #1e293b; color: #cbd5e1; border-color: #334155;">Colva</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Deployment Latitude *</label>
+          <input type="number" step="0.0001" id="reg-lat" class="form-input" required value="15.5420" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Deployment Longitude *</label>
+          <input type="number" step="0.0001" id="reg-lng" class="form-input" required value="73.7580" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; border-top: 1px solid #1e293b; padding-top: 0.75rem;">
+        <button type="button" onclick="closeRegisterModal()" class="btn btn-secondary btn-sm" style="background: #1e293b; color: #f8fafc; border-color: #334155;">Cancel</button>
+        <button type="submit" id="btn-submit-pcr" class="btn btn-primary btn-sm">Provision PCR Van 🚀</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: Update Live GPS Coordinates & Telemetry -->
+<!-- ========================================================================= -->
+<div id="modal-update-gps" style="display: none; position: fixed; inset: 0; background: rgba(9, 13, 22, 0.88); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; max-width: 480px; width: 100%; padding: 1.5rem; color: #f8fafc;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.25rem;">📍</span>
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0;" id="gps-modal-title">Update Live Location</h3>
+      </div>
+      <button onclick="closeLiveLocationModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+
+    <form id="form-update-gps" onsubmit="handleUpdateGPS(event)">
+      <input type="hidden" id="gps-unit-id" value="">
+
+      <div style="background: #1e293b; padding: 0.75rem; border-radius: 6px; border: 1px solid #334155; margin-bottom: 1rem; font-size: 0.75rem; color: #94a3b8;">
+        Click anywhere on the background map or use the device GPS to set real-time coordinates for this patrol vehicle.
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Latitude (GPS) *</label>
+          <input type="number" step="0.000001" id="gps-lat" class="form-input" required style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Longitude (GPS) *</label>
+          <input type="number" step="0.000001" id="gps-lng" class="form-input" required style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="color: #cbd5e1; font-size: 0.75rem;">Unit Operational Status</label>
+        <select id="gps-status" class="form-select" style="background: #1e293b; color: #f8fafc; border-color: #334155; font-size: 0.8125rem;">
+          {% for code, label in status_choices %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; border-top: 1px solid #1e293b; padding-top: 0.75rem;">
+        <button type="button" onclick="acquireDeviceGPS()" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; background: #1e293b; color: #38bdf8; border-color: #334155;">
+          📍 Use Device GPS
+        </button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" onclick="closeLiveLocationModal()" class="btn btn-secondary btn-sm" style="background: #1e293b; color: #f8fafc; border-color: #334155;">Cancel</button>
+          <button type="submit" id="btn-save-gps" class="btn btn-primary btn-sm">Save & Broadcast 📡</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.fleet-filter-chip {
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.fleet-filter-chip.active, .fleet-filter-chip:hover {
+  background: #2563eb;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.fleet-unit-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.fleet-unit-card:hover {
+  border-color: #38bdf8;
+}
+
+@media (max-width: 1024px) {
+  #fleet-workspace-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 360px;
+  }
+}
+</style>
+
+<script>
+let fleetMap = null;
+const unitMarkers = {};
+let activePulseMarker = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initFleetMap();
+});
+
+function initFleetMap() {
+  fleetMap = L.map('fleet-live-map', {
+    center: [15.5200, 73.7900],
+    zoom: 12,
+    zoomControl: false
+  });
+
+  L.control.zoom({ position: 'topright' }).addTo(fleetMap);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CartoDB &copy; OpenStreetMap',
+    maxZoom: 19
+  }).addTo(fleetMap);
+
+  // Render all unit markers from initial DOM data
+  document.querySelectorAll('.fleet-unit-card').forEach(card => {
+    const lat = parseFloat(card.getAttribute('data-lat'));
+    const lng = parseFloat(card.getAttribute('data-lng'));
+    const agency = card.getAttribute('data-agency');
+    const id = card.id.replace('unit-card-', '');
+    const callsign = card.querySelector('div[style*="font-weight: 700"]').innerText.trim();
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+      createOrUpdateUnitMarker(id, lat, lng, agency, callsign);
+    }
+  });
+
+  // Map Click Listener for setting GPS in Update Modal if open
+  fleetMap.on('click', (e) => {
+    const gpsModal = document.getElementById('modal-update-gps');
+    if (gpsModal && gpsModal.style.display === 'flex') {
+      document.getElementById('gps-lat').value = e.latlng.lat.toFixed(6);
+      document.getElementById('gps-lng').value = e.latlng.lng.toFixed(6);
+    }
+  });
+}
+
+function getAgencyIcon(agency, status) {
+  let emoji = '🚔';
+  let color = '#2563eb';
+  if (agency === 'TOURISM_POLICE') { emoji = '👮'; color = '#0284c7'; }
+  else if (agency === 'AMBULANCE') { emoji = '🚑'; color = '#dc2626'; }
+  else if (agency === 'FIRE_RESCUE') { emoji = '🚒'; color = '#ea580c'; }
+  else if (agency === 'BEACH_LIFEGUARD') { emoji = '🛟'; color = '#d97706'; }
+
+  const isDispatched = status === 'DISPATCHED' || status === 'ON_SCENE';
+  const glow = isDispatched ? 'box-shadow: 0 0 15px rgba(239, 68, 68, 0.9);' : '';
+
+  return L.divIcon({
+    className: 'custom-fleet-pin',
+    html: `<div style="width:34px;height:34px;background:#0f172a;border:2px solid ${color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;${glow}">${emoji}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
+  });
+}
+
+function createOrUpdateUnitMarker(id, lat, lng, agency, callsign, status = 'AVAILABLE') {
+  if (!fleetMap) return;
+
+  const icon = getAgencyIcon(agency, status);
+
+  if (unitMarkers[id]) {
+    unitMarkers[id].setLatLng([lat, lng]);
+    unitMarkers[id].setIcon(icon);
+  } else {
+    const marker = L.marker([lat, lng], { icon: icon }).addTo(fleetMap);
+    marker.bindPopup(`
+      <div style="font-family:sans-serif; min-width:140px; padding:2px;">
+        <div style="font-weight:700; font-size:12px; color:#0f172a;">${callsign}</div>
+        <div style="font-size:10px; color:#64748b; margin-top:2px;">Status: <b>${status}</b></div>
+        <div style="font-size:9px; color:#94a3b8; font-family:monospace; margin-top:2px;">${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E</div>
+        <button onclick="openLiveLocationModal(${id}, '${callsign.replace(/'/g, "\\'")}', ${lat}, ${lng})" style="margin-top:5px; width:100%; font-size:10px; padding:2px 4px; background:#2563eb; color:#fff; border:none; border-radius:3px; cursor:pointer;">Update GPS 📍</button>
+      </div>
+    `);
+    unitMarkers[id] = marker;
+  }
+}
+
+function locateUnitOnMap(lat, lng, callsign) {
+  if (!fleetMap) return;
+  fleetMap.flyTo([lat, lng], 16, { animate: true, duration: 0.8 });
+
+  if (activePulseMarker) {
+    fleetMap.removeLayer(activePulseMarker);
+    activePulseMarker = null;
+  }
+
+  const pulseIcon = L.divIcon({
+    className: 'vigil-user-pulse-marker',
+    html: `<div style="width:28px;height:28px;background:#38bdf8;border:3px solid #ffffff;border-radius:50%;box-shadow:0 0 20px rgba(56,189,248,1);"></div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+
+  activePulseMarker = L.marker([lat, lng], { icon: pulseIcon, zIndexOffset: 3000 }).addTo(fleetMap);
+  setTimeout(() => {
+    if (activePulseMarker) {
+      fleetMap.removeLayer(activePulseMarker);
+      activePulseMarker = null;
+    }
+  }, 8000);
+}
+
+function fitAllUnits() {
+  if (!fleetMap) return;
+  const group = L.featureGroup(Object.values(unitMarkers));
+  if (group.getLayers().length > 0) {
+    fleetMap.fitBounds(group.getBounds().pad(0.2));
+  } else {
+    fleetMap.flyTo([15.5200, 73.7900], 12);
+  }
+}
+
+function filterFleet(agency) {
+  document.querySelectorAll('.fleet-filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.fleet-filter-chip[data-filter="${agency}"]`)?.classList.add('active');
+
+  document.querySelectorAll('.fleet-unit-card').forEach(card => {
+    const cardAgency = card.getAttribute('data-agency');
+    const id = card.id.replace('unit-card-', '');
+
+    if (agency === 'ALL' || cardAgency === agency) {
+      card.style.display = 'block';
+      if (unitMarkers[id]) fleetMap.addLayer(unitMarkers[id]);
+    } else {
+      card.style.display = 'none';
+      if (unitMarkers[id]) fleetMap.removeLayer(unitMarkers[id]);
+    }
+  });
+}
+
+function openRegisterModal() {
+  document.getElementById('modal-register-pcr').style.display = 'flex';
+}
+
+function closeRegisterModal() {
+  document.getElementById('modal-register-pcr').style.display = 'none';
+}
+
+function setRegSector(lat, lng, stationName) {
+  document.getElementById('reg-lat').value = lat;
+  document.getElementById('reg-lng').value = lng;
+  document.getElementById('reg-station').value = stationName;
+}
+
+async function handleRegisterPCR(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-submit-pcr');
+  btn.disabled = true;
+  btn.innerText = 'Registering Unit...';
+
+  const payload = {
+    unit_code: document.getElementById('reg-unit-code').value.trim(),
+    agency: document.getElementById('reg-agency').value,
+    callsign: document.getElementById('reg-callsign').value.trim(),
+    station_base_name: document.getElementById('reg-station').value.trim(),
+    officer_in_charge: document.getElementById('reg-officer').value.trim(),
+    contact_number: document.getElementById('reg-phone').value.trim(),
+    current_latitude: parseFloat(document.getElementById('reg-lat').value),
+    current_longitude: parseFloat(document.getElementById('reg-lng').value),
+    status: 'AVAILABLE'
+  };
+
+  try {
+    const res = await fetch('/emergency/api/responders/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ PCR Unit "${payload.callsign}" successfully provisioned to fleet!`);
+      window.location.reload();
+    } else {
+      alert('Registration Failed: ' + JSON.stringify(data.errors || data.message));
+      btn.disabled = false;
+      btn.innerText = 'Provision PCR Van 🚀';
+    }
+  } catch (err) {
+    alert('Network error while registering responder.');
+    btn.disabled = false;
+    btn.innerText = 'Provision PCR Van 🚀';
+  }
+}
+
+function openLiveLocationModal(unitId, callsign, currentLat, currentLng) {
+  document.getElementById('gps-unit-id').value = unitId;
+  document.getElementById('gps-modal-title').innerText = `Update GPS: ${callsign}`;
+  document.getElementById('gps-lat').value = currentLat;
+  document.getElementById('gps-lng').value = currentLng;
+  document.getElementById('modal-update-gps').style.display = 'flex';
+}
+
+function closeLiveLocationModal() {
+  document.getElementById('modal-update-gps').style.display = 'none';
+}
+
+async function acquireDeviceGPS() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      document.getElementById('gps-lat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('gps-lng').value = pos.coords.longitude.toFixed(6);
+    }, (err) => {
+      alert('Unable to acquire browser GPS: ' + err.message);
+    });
+  }
+}
+
+async function handleUpdateGPS(e) {
+  e.preventDefault();
+  const unitId = document.getElementById('gps-unit-id').value;
+  const lat = parseFloat(document.getElementById('gps-lat').value);
+  const lng = parseFloat(document.getElementById('gps-lng').value);
+  const status = document.getElementById('gps-status').value;
+
+  const btn = document.getElementById('btn-save-gps');
+  btn.disabled = true;
+  btn.innerText = 'Broadcasting...';
+
+  try {
+    const res = await fetch(`/emergency/api/responders/${unitId}/location/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({
+        latitude: lat,
+        longitude: lng,
+        status: status
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      // Update DOM Card and Marker without full reload
+      const coordEl = document.getElementById(`unit-coords-${unitId}`);
+      if (coordEl) coordEl.innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+      const badgeEl = document.getElementById(`unit-badge-${unitId}`);
+      if (badgeEl) badgeEl.innerText = data.data.status_display || status;
+
+      const card = document.getElementById(`unit-card-${unitId}`);
+      if (card) {
+        card.setAttribute('data-lat', lat);
+        card.setAttribute('data-lng', lng);
+      }
+
+      createOrUpdateUnitMarker(unitId, lat, lng, data.data.agency, data.data.callsign, status);
+      locateUnitOnMap(lat, lng, data.data.callsign);
+      closeLiveLocationModal();
+    } else {
+      alert('Update Failed: ' + (data.message || 'Error updating location'));
+    }
+  } catch (err) {
+    alert('Network error updating telemetry.');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Save & Broadcast 📡';
+  }
+}
+
+async function updateUnitStatus(unitId, newStatus) {
+  try {
+    const res = await fetch(`/emergency/api/responders/${unitId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const badgeEl = document.getElementById(`unit-badge-${unitId}`);
+      if (badgeEl) badgeEl.innerText = data.data.status_display || newStatus;
+    }
+  } catch (err) {
+    console.error('Failed to update status', err);
+  }
+}
+
+function simulatePatrolPulse() {
+  document.querySelectorAll('.fleet-unit-card').forEach(card => {
+    const id = card.id.replace('unit-card-', '');
+    let lat = parseFloat(card.getAttribute('data-lat'));
+    let lng = parseFloat(card.getAttribute('data-lng'));
+    const agency = card.getAttribute('data-agency');
+    const callsign = card.querySelector('div[style*="font-weight: 700"]').innerText.trim();
+
+    // Minor GPS drift for simulated patrol movement (approx 50m)
+    lat += (Math.random() - 0.5) * 0.002;
+    lng += (Math.random() - 0.5) * 0.002;
+
+    card.setAttribute('data-lat', lat);
+    card.setAttribute('data-lng', lng);
+
+    const coordEl = document.getElementById(`unit-coords-${id}`);
+    if (coordEl) coordEl.innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+    createOrUpdateUnitMarker(id, lat, lng, agency, callsign);
+  });
+}
+</script>
+{% endblock %}

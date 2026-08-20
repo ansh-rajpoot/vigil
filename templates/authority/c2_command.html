@@ -1,0 +1,1647 @@
+{% extends 'base_c2.html' %}
+{% load static %}
+
+{% block title %}VIGIL C2 — Tactical Emergency Operations Center{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* C2 Operations Top Status Bar */
+  .c2-top-metrics-bar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background: #0f172a;
+    border-bottom: 1px solid #24324d;
+  }
+  .c2-metric-box {
+    background: #131d33;
+    border: 1px solid #24324d;
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .c2-metric-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .c2-metric-val {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.2;
+    margin-top: 0.2rem;
+  }
+  .c2-metric-sub {
+    font-size: 0.6875rem;
+    color: #64748b;
+    margin-top: 0.15rem;
+  }
+
+  /* Filter Bar */
+  .c2-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1.5rem;
+    background: #090d16;
+    border-bottom: 1px solid #24324d;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .filter-select {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #f8fafc;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  /* Main Workspace: Dominant Map + Live Operations Panel */
+  .c2-main-workspace {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    height: calc(100vh - 170px);
+    min-height: 520px;
+    overflow: hidden;
+    background: #090d16;
+  }
+
+  /* Map Container */
+  .c2-live-map-pane {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #0b1120;
+  }
+  #c2-tactical-map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  /* Floating Map Layer Toggles & Quick Tools */
+  .c2-map-layer-chips {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    background: rgba(15, 23, 42, 0.94);
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    pointer-events: auto;
+  }
+  .c2-map-quick-tools {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 1000;
+    display: flex;
+    gap: 0.35rem;
+    pointer-events: auto;
+  }
+  .map-tool-btn {
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid #334155;
+    color: #f8fafc;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  }
+  .map-tool-btn:hover {
+    background: #1e293b;
+    border-color: #38bdf8;
+    color: #38bdf8;
+  }
+  .map-chip {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #94a3b8;
+    background: #1e293b;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid #334155;
+    transition: all 0.15s ease;
+  }
+  .map-chip:hover {
+    color: #f8fafc;
+    border-color: #475569;
+  }
+  .map-chip.active {
+    background: #1e3a8a;
+    color: #ffffff;
+    border-color: #38bdf8;
+  }
+
+  /* Right Operations Triage Feed */
+  .c2-operations-feed-pane {
+    background: #0f172a;
+    border-left: 1px solid #24324d;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+  .ops-tab-bar {
+    display: flex;
+    background: #131d33;
+    border-bottom: 1px solid #24324d;
+  }
+  .ops-tab-btn {
+    flex: 1;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    text-align: center;
+  }
+  .ops-tab-btn.active {
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
+    background: #0f172a;
+  }
+  .ops-feed-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  /* Operations Alert Card */
+  .ops-event-card {
+    background: #131d33;
+    border: 1px solid #24324d;
+    border-radius: 6px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .ops-event-card.is-sos {
+    border-left: 4px solid #ef4444;
+  }
+  .ops-event-card.is-critical-incident {
+    border-left: 4px solid #ea580c;
+  }
+  .ops-event-card.is-warning {
+    border-left: 4px solid #f59e0b;
+  }
+  .ops-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ops-card-id {
+    font-family: monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #38bdf8;
+  }
+  .ops-card-title {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #f8fafc;
+  }
+  .ops-card-meta {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .ops-card-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+  }
+
+  /* Bottom Analytics Drawer */
+  .c2-analytics-drawer {
+    background: #0f172a;
+    border-top: 1px solid #24324d;
+    padding: 1rem 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+  .chart-box {
+    background: #131d33;
+    border: 1px solid #24324d;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-title {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: #090d16;">
+
+  <!-- 1. TOP OPERATIONAL METRICS BAR -->
+  <div class="c2-top-metrics-bar">
+    <div class="c2-metric-box">
+      <div class="c2-metric-label">Active Monitored Tourists</div>
+      <div class="c2-metric-val" id="metric-active-tourists">{{ active_tourists_count }}</div>
+      <div class="c2-metric-sub">Live GPS Heartbeats</div>
+    </div>
+
+    <div class="c2-metric-box" style="border-top: 3px solid #ef4444;">
+      <div class="c2-metric-label" style="color: #ef4444;">Active SOS Panic Alerts</div>
+      <div class="c2-metric-val" id="metric-active-sos" style="color: #ef4444;">{{ active_sos_count }}</div>
+      <div class="c2-metric-sub">Auto-Dispatched PCR</div>
+    </div>
+
+    <div class="c2-metric-box" style="border-top: 3px solid #f59e0b;">
+      <div class="c2-metric-label">Incidents Active Today</div>
+      <div class="c2-metric-val" id="metric-incidents-today">{{ incidents_today_count }}</div>
+      <div class="c2-metric-sub">Pending / Investigating</div>
+    </div>
+
+    <div class="c2-metric-box" style="border-top: 3px solid #ea580c;">
+      <div class="c2-metric-label">High-Risk Tourists</div>
+      <div class="c2-metric-val" id="metric-high-risk-tourists">{{ high_risk_tourists_count }}</div>
+      <div class="c2-metric-sub">Score &ge; 61 / 100</div>
+    </div>
+
+    <div class="c2-metric-box">
+      <div class="c2-metric-label">Active Regional Alerts</div>
+      <div class="c2-metric-val" id="metric-active-alerts">{{ active_alerts_count }}</div>
+      <div class="c2-metric-sub">Curfews & Weather Advisories</div>
+    </div>
+
+    <div class="c2-metric-box" style="border-top: 3px solid #10b981;">
+      <div class="c2-metric-label">Avg Response Time</div>
+      <div class="c2-metric-val" style="color: #10b981;">{{ avg_response_time }}m</div>
+      <div class="c2-metric-sub">{{ available_responders_count }} Available Units</div>
+    </div>
+  </div>
+
+  <!-- 2. FILTER & SECTOR CONTROL BAR -->
+  <div class="c2-filter-bar">
+    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+      <div class="filter-group">
+        <label style="font-size: 0.6875rem; color: #94a3b8; font-weight: 700;">SEVERITY:</label>
+        <select class="filter-select" id="filter-severity" onchange="applyC2Filters()">
+          <option value="ALL">All Severities</option>
+          <option value="CRITICAL">Critical</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label style="font-size: 0.6875rem; color: #94a3b8; font-weight: 700;">CATEGORY:</label>
+        <select class="filter-select" id="filter-category" onchange="applyC2Filters()">
+          <option value="ALL">All Categories</option>
+          {% for code, label in categories %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label style="font-size: 0.6875rem; color: #94a3b8; font-weight: 700;">STATUS:</label>
+        <select class="filter-select" id="filter-status" onchange="applyC2Filters()">
+          <option value="ALL">All Statuses</option>
+          <option value="REPORTED">Reported</option>
+          <option value="VERIFIED">Verified</option>
+          <option value="ASSIGNED">Assigned</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label style="font-size: 0.6875rem; color: #94a3b8; font-weight: 700;">SECTOR:</label>
+        <select class="filter-select" id="filter-sector" onchange="applySectorZoom()">
+          <option value="ALL">All Goa Sectors</option>
+          <option value="NORTH_COASTAL">North Coastal (Baga / Calangute)</option>
+          <option value="PANAJI_CENTRAL">Panaji Central & Promenade</option>
+          <option value="VAGATOR_ANJUNA">Vagator / Anjuna Cliffs</option>
+          <option value="SOUTH_HERITAGE">South Heritage Sector</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Live WebSocket Connection Indicator -->
+    <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #10b981;">
+      <div id="ws-indicator" style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></div>
+      <span id="ws-status-text">C2 Live Telemetry Feed Connected</span>
+    </div>
+  </div>
+
+  <!-- 3. MAIN LIVE GIS MAP & OPERATIONS TRIAGE WORKSPACE -->
+  <div class="c2-main-workspace">
+
+    <!-- Left Live GIS Map Pane -->
+    <div class="c2-live-map-pane">
+      <!-- Floating Map Layer Chips -->
+      <div class="c2-map-layer-chips" id="c2-layer-chips-container">
+        <div class="map-chip active" data-layer="sos">🚨 SOS ({{ active_sos_count }})</div>
+        <div class="map-chip active" data-layer="incidents">⚠️ Incidents</div>
+        <div class="map-chip active" data-layer="fleet">🚔 Fleet ({{ available_responders_count }})</div>
+        <div class="map-chip active" data-layer="tourists">👥 Tourists</div>
+        <div class="map-chip active" data-layer="police">👮 Police POIs</div>
+        <div class="map-chip active" data-layer="hospitals">🏥 Hospitals</div>
+        <div class="map-chip active" data-layer="geozones">🛡️ Geofences</div>
+        <div class="map-chip active" data-layer="blackspots">⚠️ Blackspots</div>
+      </div>
+
+      <!-- Floating Quick Map Tools -->
+      <div class="c2-map-quick-tools" id="c2-quick-tools-container">
+        <button type="button" class="map-tool-btn" onclick="zoomToOverview()" title="Center Map on Goa Sector">🗺️ Overview</button>
+        <button type="button" class="map-tool-btn" onclick="zoomToFirstSOS()" title="Focus on Highest Priority Active SOS">🚨 Focus SOS</button>
+        <button type="button" class="map-tool-btn" onclick="zoomToFleet()" title="Fit View to Responder Units">🚔 Fleet View</button>
+      </div>
+
+      <div id="c2-tactical-map"></div>
+    </div>
+
+    <!-- Right Live Operations Feed Pane -->
+    <div class="c2-operations-feed-pane">
+      <div class="ops-tab-bar">
+        <button class="ops-tab-btn active" onclick="switchOpsTab('sos')">🚨 Active SOS ({{ active_sos_count }})</button>
+        <button class="ops-tab-btn" onclick="switchOpsTab('incidents')">⚠️ Incidents ({{ open_incidents_count|default:incidents_today_count }})</button>
+        <button class="ops-tab-btn" onclick="switchOpsTab('fleet')">🚔 Fleet ({{ available_responders_count }})</button>
+      </div>
+
+      <!-- TAB 1: SOS FEED -->
+      <div class="ops-feed-scroll" id="ops-tab-sos" style="display: flex;">
+        {% for sos in active_sos_alerts %}
+        <div class="ops-event-card is-sos" id="sos-card-{{ sos.sos_id }}" data-lat="{{ sos.latitude }}" data-lng="{{ sos.longitude }}">
+          <div class="ops-card-header">
+            <span class="ops-card-id">{{ sos.sos_id }}</span>
+            <span class="badge {% if sos.status == 'RESOLVED' %}badge-safe{% elif sos.status == 'RESPONDING' or sos.status == 'ON_SCENE' %}badge-safe{% elif sos.status == 'ACKNOWLEDGED' %}badge-warning{% else %}badge-critical{% endif %}" id="sos-badge-{{ sos.sos_id }}">
+              {{ sos.get_status_display }}
+            </span>
+          </div>
+          <div class="ops-card-title">{{ sos.tourist.user.get_full_name|default:sos.tourist.user.username }}</div>
+          <div class="ops-card-meta">
+            <span>📞 {{ sos.tourist.user.phone_number }}</span>
+            <span>•</span>
+            <span>🩸 {{ sos.tourist.blood_group|default:"O+" }}</span>
+            <span>•</span>
+            <span>⚡ {{ sos.battery_level }}%</span>
+          </div>
+          <div style="font-size: 0.6875rem; color: #94a3b8;">
+            Trigger: <b>{{ sos.get_trigger_type_display }}</b> • {{ sos.triggered_at|date:"H:i:s" }}
+          </div>
+          <div class="ops-card-actions" id="sos-actions-{{ sos.sos_id }}">
+            <button onclick="openDispatchModal('{{ sos.sos_id }}', {{ sos.latitude }}, {{ sos.longitude }})" class="btn btn-danger btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.55rem; font-weight:700;">
+              Assign PCR 🚔
+            </button>
+            {% if sos.status == 'ACTIVE' %}
+            <button onclick="acknowledgeSOS('{{ sos.sos_id }}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Acknowledge</button>
+            {% elif sos.status == 'RESPONDING' %}
+            <button onclick="markOnScene('{{ sos.sos_id }}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Mark On Scene</button>
+            {% endif %}
+            <button onclick="openResolveModal('{{ sos.sos_id }}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#10b981; border-color:#334155;">Resolve ✓</button>
+            <button onclick="zoomToCoords({{ sos.latitude }}, {{ sos.longitude }}, '🚨 SOS: {{ sos.tourist.user.get_full_name|default:sos.tourist.user.username|escapejs }} ({{ sos.sos_id }})')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Locate 📍</button>
+          </div>
+        </div>
+        {% empty %}
+        <div style="padding: 2rem; text-align: center; color: #64748b; font-size: 0.8125rem;">
+          No active SOS emergency alerts. All tourist sectors clear.
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- TAB 2: INCIDENTS FEED -->
+      <div class="ops-feed-scroll" id="ops-tab-incidents" style="display: none;">
+        {% for inc in active_incidents %}
+        <div class="ops-event-card {% if inc.severity == 'CRITICAL' %}is-critical-incident{% else %}is-warning{% endif %}" id="inc-card-{{ inc.incident_id }}" data-lat="{{ inc.latitude }}" data-lng="{{ inc.longitude }}">
+          <div class="ops-card-header">
+            <span class="ops-card-id">{{ inc.incident_id }}</span>
+            <span class="badge {% if inc.severity == 'CRITICAL' %}badge-critical{% elif inc.severity == 'HIGH' %}badge-high-risk{% else %}badge-warning{% endif %}">
+              {{ inc.get_severity_display }}
+            </span>
+          </div>
+          <div class="ops-card-title">{{ inc.title }}</div>
+          <div class="ops-card-meta">
+            <span>{{ inc.get_category_display }}</span>
+            <span>•</span>
+            <span>{{ inc.location_name|default:"Goa Region" }}</span>
+          </div>
+          <div style="font-size: 0.6875rem; color: #94a3b8;">
+            Status: <b id="inc-status-{{ inc.incident_id }}">{{ inc.get_status_display }}</b> • {{ inc.created_at|date:"H:i" }}
+          </div>
+          <div id="inc-responder-{{ inc.incident_id }}" style="font-size: 0.75rem; color: #10b981; margin-top: 0.2rem; font-weight: 600;">
+            {% if inc.assigned_responder %}🚔 Assigned: {{ inc.assigned_responder.callsign }}{% endif %}
+          </div>
+          <div class="ops-card-actions">
+            <button onclick="openC2AssignIncidentModal('{{ inc.incident_id }}', '{{ inc.title|escapejs }}', {{ inc.latitude }}, {{ inc.longitude }})" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.25rem 0.5rem; background: #1e293b; color: #38bdf8; border-color: #334155;">Assign PCR 🚔</button>
+            <button onclick="quickResolveIncident('{{ inc.incident_id }}')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.25rem 0.5rem; background: #1e293b; color: #10b981; border-color: #334155;">Resolve</button>
+            <button onclick="zoomToCoords({{ inc.latitude }}, {{ inc.longitude }}, '⚠️ Incident: {{ inc.title|escapejs }} ({{ inc.incident_id }})')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.25rem 0.5rem; background: #1e293b; color: #38bdf8; border-color: #334155;">Locate 📍</button>
+          </div>
+        </div>
+        {% empty %}
+        <div style="padding: 2rem; text-align: center; color: #64748b; font-size: 0.8125rem;">
+          No open incidents reported.
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- TAB 3: FLEET FEED -->
+      <div class="ops-feed-scroll" id="ops-tab-fleet" style="display: none;">
+        {% for r in responders %}
+        <div class="ops-event-card" id="fleet-card-{{ r.id }}" data-lat="{{ r.current_latitude }}" data-lng="{{ r.current_longitude }}">
+          <div class="ops-card-header">
+            <span class="ops-card-id">{{ r.unit_code }}</span>
+            <span class="badge {% if r.status == 'AVAILABLE' %}badge-safe{% else %}badge-warning{% endif %}">
+              {{ r.get_status_display }}
+            </span>
+          </div>
+          <div class="ops-card-title">{{ r.callsign }}</div>
+          <div class="ops-card-meta">
+            <span>{{ r.get_agency_display }}</span>
+            <span>•</span>
+            <span>{{ r.officer_in_charge }}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
+            <div style="font-size: 0.75rem; color: #38bdf8;">📞 {{ r.contact_number }}</div>
+            <button onclick="zoomToCoords({{ r.current_latitude }}, {{ r.current_longitude }}, '🚔 {{ r.callsign|escapejs }} ({{ r.get_agency_display|escapejs }})')" class="btn btn-secondary btn-sm" style="font-size: 0.6875rem; padding: 0.2rem 0.5rem; background: #1e293b; color: #38bdf8; border-color: #334155;">Locate 📍</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 4. OPERATIONAL CHART.JS ANALYTICS DRAWER -->
+  <div class="c2-analytics-drawer">
+    <!-- Chart 1: Incidents by Category -->
+    <div class="chart-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <div class="chart-title" style="margin-bottom:0;">Incidents by Category</div>
+        <a href="{% url 'dashboard:analytics_dashboard' %}" style="font-size:0.6875rem; color:#38bdf8; text-decoration:none; font-weight:600;">Deep Dive &rarr;</a>
+      </div>
+      <div style="position: relative; flex: 1; min-height: 0;">
+        <canvas id="chart-incidents-category"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 2: 7-Day Incident Trend -->
+    <div class="chart-box">
+      <div class="chart-title">7-Day Incident & Hazard Trend</div>
+      <div style="position: relative; flex: 1; min-height: 0;">
+        <canvas id="chart-incident-trend"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 3: Regional Risk Distribution -->
+    <div class="chart-box">
+      <div class="chart-title">Tourist Risk Index Distribution</div>
+      <div style="position: relative; flex: 1; min-height: 0;">
+        <canvas id="chart-risk-distribution"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- C2 RESPONDER DISPATCH MODAL -->
+  <div id="c2-dispatch-modal" style="display:none; position:fixed; inset:0; background:rgba(9,13,22,0.85); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; max-width:540px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); overflow:hidden; font-family:var(--font-body);">
+      <div style="background:#1e293b; border-bottom:1px solid #334155; padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.6875rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">Tactical Response Management</div>
+          <h3 style="font-size:1.125rem; font-weight:700; color:#f8fafc; margin:0.15rem 0 0 0;" id="dispatch-modal-title">Deploy Responder Unit</h3>
+        </div>
+        <button type="button" onclick="closeDispatchModal()" style="background:none; border:none; color:#94a3b8; font-size:1.25rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="padding:1.25rem; display:flex; flex-direction:column; gap:1rem;">
+        <input type="hidden" id="dispatch-sos-id" value="">
+        <input type="hidden" id="dispatch-target-lat" value="">
+        <input type="hidden" id="dispatch-target-lng" value="">
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:0.5rem;">Select Available Field Responder Unit</label>
+          <div style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem; padding-right:0.25rem;" id="dispatch-responders-list">
+            {% for r in responders %}
+            <label style="display:flex; align-items:center; justify-content:space-between; background:#131d33; border:1px solid #24324d; border-radius:6px; padding:0.65rem 0.85rem; cursor:pointer; transition:all 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:0.65rem;">
+                <input type="radio" name="selected_responder" value="{{ r.id }}" data-lat="{{ r.current_latitude }}" data-lng="{{ r.current_longitude }}" data-callsign="{{ r.callsign }}" {% if forloop.first %}checked{% endif %}>
+                <div>
+                  <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">{{ r.callsign }}</div>
+                  <div style="font-size:0.6875rem; color:#94a3b8;">{{ r.get_agency_display }} • {{ r.officer_in_charge }} (📞 {{ r.contact_number }})</div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge {% if r.status == 'AVAILABLE' %}badge-safe{% else %}badge-warning{% endif %}" style="font-size:0.6875rem;">{{ r.get_status_display }}</span>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:0.35rem;" for="dispatch-notes">Triage / Deployment Notes</label>
+          <textarea id="dispatch-notes" rows="2" class="form-input" style="width:100%; background:#131d33; border-color:#24324d; color:#f8fafc; font-size:0.8125rem;" placeholder="e.g. Priority response with trauma first-aid kit."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+          <button type="button" onclick="closeDispatchModal()" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">Cancel</button>
+          <button type="button" id="btn-confirm-dispatch" onclick="submitDispatch()" class="btn btn-danger btn-sm" style="font-weight:700;">Confirm & Deploy Unit 🚔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C2 RESOLVE EMERGENCY MODAL -->
+  <div id="c2-resolve-modal" style="display:none; position:fixed; inset:0; background:rgba(9,13,22,0.85); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; max-width:480px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); overflow:hidden; font-family:var(--font-body);">
+      <div style="background:#1e293b; border-bottom:1px solid #334155; padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.6875rem; font-weight:700; color:#10b981; text-transform:uppercase; letter-spacing:0.05em;">Emergency Resolution Protocol</div>
+          <h3 style="font-size:1.125rem; font-weight:700; color:#f8fafc; margin:0.15rem 0 0 0;">Resolve SOS Emergency</h3>
+        </div>
+        <button type="button" onclick="closeResolveModal()" style="background:none; border:none; color:#94a3b8; font-size:1.25rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="padding:1.25rem; display:flex; flex-direction:column; gap:1rem;">
+        <input type="hidden" id="resolve-sos-id" value="">
+        <p style="font-size:0.8125rem; color:#cbd5e1; margin:0; line-height:1.4;">
+          Confirming safe resolution will close this active emergency ticket, reset the tourist safety status to <b>ACTIVE</b>, and return dispatched responders to <b>AVAILABLE</b> patrol duty.
+        </p>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:0.35rem;" for="resolve-notes">On-Scene Resolution Log</label>
+          <textarea id="resolve-notes" rows="2" class="form-input" style="width:100%; background:#131d33; border-color:#24324d; color:#f8fafc; font-size:0.8125rem;" placeholder="e.g. Tourist safely assisted, sprain treated, escorted to hotel."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+          <button type="button" onclick="closeResolveModal()" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">Cancel</button>
+          <button type="button" id="btn-confirm-resolve" onclick="submitResolve()" class="btn btn-safe btn-sm" style="background:#059669; color:#ffffff; font-weight:700;">Confirm Resolved ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C2 ASSIGN PCR TO INCIDENT MODAL -->
+  <div id="modal-c2-assign-incident" style="display:none; position:fixed; inset:0; background:rgba(9,13,22,0.85); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; max-width:540px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); overflow:hidden; font-family:var(--font-body);">
+      <div style="background:#1e293b; border-bottom:1px solid #334155; padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.6875rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">Incident Dispatch Console</div>
+          <h3 style="font-size:1.125rem; font-weight:700; color:#f8fafc; margin:0.15rem 0 0 0;" id="assign-incident-title">Assign PCR Patrol Unit</h3>
+        </div>
+        <button type="button" onclick="closeC2AssignIncidentModal()" style="background:none; border:none; color:#94a3b8; font-size:1.25rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="padding:1.25rem; display:flex; flex-direction:column; gap:1rem;">
+        <input type="hidden" id="assign-incident-id" value="">
+        <input type="hidden" id="assign-incident-lat" value="">
+        <input type="hidden" id="assign-incident-lng" value="">
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:0.5rem;">Select Responder / PCR Van Unit</label>
+          <div style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem; padding-right:0.25rem;" id="assign-incident-responders-list">
+            {% for r in responders %}
+            <label style="display:flex; align-items:center; justify-content:space-between; background:#131d33; border:1px solid #24324d; border-radius:6px; padding:0.65rem 0.85rem; cursor:pointer; transition:all 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:0.65rem;">
+                <input type="radio" name="selected_incident_responder" value="{{ r.id }}" data-lat="{{ r.current_latitude }}" data-lng="{{ r.current_longitude }}" data-callsign="{{ r.callsign }}" {% if forloop.first %}checked{% endif %}>
+                <div>
+                  <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">
+                    {% if r.agency == 'AMBULANCE' %}🚑{% elif r.agency == 'BEACH_LIFEGUARD' %}🛟{% elif r.agency == 'TOURISM_POLICE' %}👮{% else %}🚔{% endif %}
+                    {{ r.callsign }}
+                  </div>
+                  <div style="font-size:0.6875rem; color:#94a3b8;">{{ r.get_agency_display }} • {{ r.officer_in_charge }} (📞 {{ r.contact_number }})</div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge {% if r.status == 'AVAILABLE' %}badge-safe{% else %}badge-warning{% endif %}" style="font-size:0.6875rem;">{{ r.get_status_display }}</span>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:0.35rem;" for="assign-incident-notes">Dispatch Instructions & Notes</label>
+          <textarea id="assign-incident-notes" rows="2" class="form-input" style="width:100%; background:#131d33; border-color:#24324d; color:#f8fafc; font-size:0.8125rem;" placeholder="e.g. Unit dispatched to secure area and verify report."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; border-top:1px solid #1e293b; padding-top:0.75rem;">
+          <button type="button" onclick="closeC2AssignIncidentModal()" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">Cancel</button>
+          <button type="button" id="btn-confirm-assign-incident" onclick="submitC2AssignIncident()" class="btn btn-primary btn-sm" style="font-weight:700;">Deploy & Assign PCR 🚔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let tacticalMap = null;
+const mapLayers = {
+  sos: L.layerGroup(),
+  incidents: L.layerGroup(),
+  fleet: L.layerGroup(),
+  tourists: L.layerGroup(),
+  police: L.layerGroup(),
+  hospitals: L.layerGroup(),
+  geozones: L.layerGroup(),
+  blackspots: L.layerGroup()
+};
+
+const tacticalMarkers = {};
+let activeLocateMarker = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initTacticalMap();
+  initCharts();
+  initWebSocketTelemetry();
+  initLayerToggles();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const pLat = urlParams.get('lat');
+  const pLng = urlParams.get('lng');
+  if (pLat && pLng) {
+    setTimeout(() => {
+      zoomToCoords(pLat, pLng, '📍 Incident Target Location');
+    }, 600);
+  }
+});
+
+// 1. Tactical Leaflet Map Initialization
+function initTacticalMap() {
+  const mapEl = document.getElementById('c2-tactical-map');
+  if (!mapEl) return;
+
+  tacticalMap = L.map('c2-tactical-map', {
+    center: [15.5200, 73.7900],
+    zoom: 12,
+    zoomControl: false
+  });
+
+  L.control.zoom({ position: 'bottomleft' }).addTo(tacticalMap);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> • VIGIL C2 Tactical Map',
+    maxZoom: 20,
+    subdomains: 'abcd'
+  }).addTo(tacticalMap);
+
+  // Add all layers to map
+  Object.values(mapLayers).forEach(l => l.addTo(tacticalMap));
+
+  loadGISData();
+}
+
+function createCustomIcon(emoji, color) {
+  return L.divIcon({
+    className: 'custom-c2-pin',
+    html: `
+      <div style="width:28px; height:28px; background:${color}; border-radius:50%; border:2px solid #ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; font-size:13px;">
+        ${emoji}
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
+  });
+}
+
+// 2. Load GIS Layers via Backend API
+async function loadGISData() {
+  try {
+    const res = await fetch('/maps/api/gis-layers/');
+    const json = await res.json();
+    if (!json.success || !json.data) return;
+    const d = json.data;
+
+    // Clear previous layers
+    Object.values(mapLayers).forEach(l => l.clearLayers());
+
+    // A. Police Outposts
+    (d.police_stations || []).forEach(p => {
+      const m = L.marker([p.latitude, p.longitude], { icon: createCustomIcon('👮', '#1e3a8a') })
+        .bindPopup(`<b>👮 Police Station: ${p.name}</b><br>📞 ${p.contact_number || '112'}<br><small>${p.address || ''}</small>`);
+      m.addTo(mapLayers.police);
+      tacticalMarkers[`poi_${p.id}`] = m;
+    });
+
+    // B. Hospitals
+    (d.hospitals || []).forEach(h => {
+      const m = L.marker([h.latitude, h.longitude], { icon: createCustomIcon('🏥', '#10b981') })
+        .bindPopup(`<b>🏥 Hospital: ${h.name}</b><br>📞 ${h.contact_number || '108'}<br><small>${h.address || ''}</small>`);
+      m.addTo(mapLayers.hospitals);
+      tacticalMarkers[`poi_${h.id}`] = m;
+    });
+
+    // C. Responder Fleet
+    (d.responders || []).forEach(r => {
+      const isAvail = r.status === 'AVAILABLE';
+      const m = L.marker([r.latitude, r.longitude], { icon: createCustomIcon('🚔', isAvail ? '#059669' : '#f59e0b') })
+        .bindPopup(`
+          <div style="font-family:sans-serif; color:#0f172a;">
+            <div style="font-weight:700; font-size:13px;">🚔 ${r.callsign}</div>
+            <div style="font-size:11px; color:#64748b;">${r.agency} • Status: <b>${r.status_display}</b></div>
+            <div style="font-size:11px; color:#334155; margin-top:2px;">Officer: ${r.officer_in_charge} (📞 ${r.contact_number})</div>
+          </div>
+        `);
+      m.addTo(mapLayers.fleet);
+      tacticalMarkers[`fleet_${r.id}`] = m;
+    });
+
+    // D. Blackspots
+    (d.blackspots || []).forEach(b => {
+      const c = L.circle([b.latitude, b.longitude], {
+        radius: b.radius_meters || 350,
+        color: '#ea580c',
+        weight: 2,
+        fillColor: '#ea580c',
+        fillOpacity: 0.15,
+        dashArray: '5,5'
+      }).bindPopup(`<b>⚠️ Blackspot: ${b.name}</b><br>${b.safety_advice}`).addTo(mapLayers.blackspots);
+      tacticalMarkers[`blackspot_${b.id}`] = c;
+    });
+
+    // E. Geofences
+    (d.geozones || []).forEach(z => {
+      if (z.polygon_geojson) {
+        const colorMap = { 'SAFE': '#10b981', 'CAUTION': '#f59e0b', 'HIGH_RISK': '#ea580c', 'RESTRICTED': '#dc2626', 'EMERGENCY': '#ef4444' };
+        const color = colorMap[z.zone_type] || '#38bdf8';
+        const poly = L.geoJSON(z.polygon_geojson, {
+          style: { color: color, weight: 2, fillColor: color, fillOpacity: 0.12 }
+        }).bindPopup(`<b>🛡️ Geofence: ${z.name}</b> (${z.zone_type})<br>${z.safety_advisory || ''}`).addTo(mapLayers.geozones);
+        tacticalMarkers[`zone_${z.id}`] = poly;
+      }
+    });
+
+    // F. Incidents
+    (d.incidents || []).forEach(inc => {
+      const m = L.marker([inc.latitude, inc.longitude], { icon: createCustomIcon('⚠️', '#d97706') })
+        .bindPopup(`<b>⚠️ Incident: ${inc.title}</b><br>ID: ${inc.incident_id || inc.id}<br>Severity: <b>${inc.severity}</b><br>Status: ${inc.status}`);
+      m.addTo(mapLayers.incidents);
+      tacticalMarkers[`inc_${inc.incident_id || inc.id}`] = m;
+    });
+
+    // G. Active SOS Alerts
+    (d.sos_events || []).forEach(s => {
+      const m = L.marker([s.latitude, s.longitude], { icon: createCustomIcon('🚨', '#dc2626') })
+        .bindPopup(`<b>🚨 SOS ALERT: ${s.tourist_name}</b><br>ID: ${s.sos_code}<br>Status: <b>${s.status_display || s.status}</b>`);
+      m.addTo(mapLayers.sos);
+      tacticalMarkers[`sos_${s.sos_code}`] = m;
+    });
+
+    // H. Active Tourists
+    (d.tourists || []).forEach(t => {
+      const m = L.marker([t.latitude, t.longitude], { icon: createCustomIcon('👤', '#2563eb') })
+        .bindPopup(`<b>👤 Tourist: ${t.name}</b><br>Battery: ${t.battery_level}%<br>Nationality: ${t.nationality}`);
+      m.addTo(mapLayers.tourists);
+      tacticalMarkers[`tourist_${t.id}`] = m;
+    });
+
+  } catch (err) {
+    console.error('Failed to load C2 GIS layers:', err);
+  }
+}
+
+// 3. Operational Charts via Chart.js
+function initCharts() {
+  const ctxCat = document.getElementById('chart-incidents-category');
+  if (ctxCat) {
+    new Chart(ctxCat, {
+      type: 'doughnut',
+      data: {
+        labels: {{ chart_cat_labels|safe }},
+        datasets: [{
+          data: {{ chart_cat_values|safe }},
+          backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#64748b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  const ctxTrend = document.getElementById('chart-incident-trend');
+  if (ctxTrend) {
+    new Chart(ctxTrend, {
+      type: 'line',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+          label: 'Incidents',
+          data: [4, 6, 3, 5, 8, 12, 7],
+          borderColor: '#38bdf8',
+          backgroundColor: 'rgba(56, 189, 248, 0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+          y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+        }
+      }
+    });
+  }
+
+  const ctxRisk = document.getElementById('chart-risk-distribution');
+  if (ctxRisk) {
+    new Chart(ctxRisk, {
+      type: 'bar',
+      data: {
+        labels: ['Safe (0-30)', 'Moderate (31-60)', 'High (61-80)', 'Critical (81-100)'],
+        datasets: [{
+          data: {{ chart_risk_data|safe }},
+          backgroundColor: ['#10b981', '#f59e0b', '#ea580c', '#ef4444'],
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } },
+          y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+        }
+      }
+    });
+  }
+}
+
+// 4. WebSocket Telemetry Feed
+let wsReconnectDelay = 1000;
+let c2Socket = null;
+
+function initWebSocketTelemetry() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/c2/stream/`;
+
+  try {
+    c2Socket = new WebSocket(wsUrl);
+
+    c2Socket.onopen = () => {
+      console.log('⚡ C2 Telemetry WebSocket Connected');
+      const dot = document.getElementById('ws-indicator');
+      const text = document.getElementById('ws-status-text');
+      if (dot) dot.style.background = '#10b981';
+      if (text) {
+        text.innerText = 'C2 Live Telemetry Feed Connected';
+        text.style.color = '#10b981';
+      }
+      wsReconnectDelay = 1000;
+    };
+
+    c2Socket.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        handleC2LiveEvent(msg);
+      } catch (err) {
+        console.warn('Error parsing C2 WS event:', err);
+      }
+    };
+
+    c2Socket.onclose = () => {
+      const dot = document.getElementById('ws-indicator');
+      const text = document.getElementById('ws-status-text');
+      if (dot) dot.style.background = '#ef4444';
+      if (text) {
+        text.innerText = 'Telemetry Reconnecting...';
+        text.style.color = '#ef4444';
+      }
+      setTimeout(initWebSocketTelemetry, Math.min(wsReconnectDelay *= 1.5, 10000));
+    };
+
+    c2Socket.onerror = () => {
+      if (c2Socket) c2Socket.close();
+    };
+
+  } catch (err) {
+    console.warn('WebSocket setup error:', err);
+  }
+}
+
+function handleC2LiveEvent(msg) {
+  const eventType = msg.type || (msg.data && msg.data.type);
+  const payload = msg.data || msg;
+
+  if (eventType === 'new_sos_alert') {
+    const sos = payload.sos || payload;
+    showC2Toast('🚨 HIGH PRIORITY SOS', `Emergency beacon triggered by ${sos.tourist_name || 'Tourist'}`, 'critical');
+
+    const sosCountEl = document.getElementById('metric-active-sos');
+    if (sosCountEl) {
+      const current = parseInt(sosCountEl.innerText) || 0;
+      sosCountEl.innerText = current + 1;
+    }
+
+    const sosFeed = document.getElementById('ops-tab-sos');
+    if (sosFeed) {
+      const card = document.createElement('div');
+      card.className = 'ops-event-card is-sos';
+      card.id = `sos-card-${sos.sos_id}`;
+      card.setAttribute('data-lat', sos.latitude);
+      card.setAttribute('data-lng', sos.longitude);
+      card.innerHTML = `
+        <div class="ops-card-header">
+          <span class="ops-card-id">${sos.sos_id}</span>
+          <span class="badge badge-critical" id="sos-badge-${sos.sos_id}">ACTIVE</span>
+        </div>
+        <div class="ops-card-title">${sos.tourist_name || 'Emergency Tourist'}</div>
+        <div class="ops-card-meta">
+          <span>📞 ${sos.tourist_phone || 'Emergency Line'}</span>
+          <span>•</span>
+          <span>🩸 ${sos.blood_group || 'O+'}</span>
+          <span>•</span>
+          <span>⚡ ${sos.battery_level || 90}%</span>
+        </div>
+        <div style="font-size:0.6875rem; color:#94a3b8;">
+          Trigger: <b>${sos.trigger_type || 'MANUAL_BUTTON'}</b> • Just Now
+        </div>
+        <div class="ops-card-actions" id="sos-actions-${sos.sos_id}">
+          <button onclick="openDispatchModal('${sos.sos_id}', ${sos.latitude}, ${sos.longitude})" class="btn btn-danger btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.55rem; font-weight:700;">Assign PCR 🚔</button>
+          <button onclick="acknowledgeSOS('${sos.sos_id}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#f8fafc; border-color:#334155;">Acknowledge</button>
+          <button onclick="openResolveModal('${sos.sos_id}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#10b981; border-color:#334155;">Resolve ✓</button>
+          <button onclick="zoomToCoords(${sos.latitude}, ${sos.longitude}, '🚨 SOS: ${sos.tourist_name || 'Tourist'} (${sos.sos_id})')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Locate 📍</button>
+        </div>
+      `;
+      sosFeed.insertBefore(card, sosFeed.firstChild);
+    }
+
+    if (tacticalMap && sos.latitude && sos.longitude) {
+      const m = L.marker([sos.latitude, sos.longitude], { icon: createCustomIcon('🚨', '#dc2626') })
+        .bindPopup(`<b>🚨 SOS ALERT: ${sos.tourist_name || 'Tourist'}</b><br>ID: ${sos.sos_id}<br>Status: <b>ACTIVE</b>`)
+        .addTo(mapLayers.sos);
+      tacticalMarkers[`sos_${sos.sos_id}`] = m;
+      zoomToCoords(sos.latitude, sos.longitude, `🚨 SOS: ${sos.tourist_name || 'Tourist'}`);
+    }
+  }
+
+  else if (eventType === 'sos_status_change' && payload.status === 'ACKNOWLEDGED') {
+    showC2Toast('ℹ️ SOS ACKNOWLEDGED', `Emergency ${payload.sos_id} acknowledged by C2 Desk`, 'info');
+    const badge = document.getElementById(`sos-badge-${payload.sos_id}`);
+    if (badge) {
+      badge.className = 'badge badge-warning';
+      badge.innerText = 'ACKNOWLEDGED';
+    }
+  }
+
+  else if (eventType === 'sos_responder_dispatched' || (eventType === 'sos_status_change' && payload.status === 'RESPONDING')) {
+    const responderName = payload.responder ? payload.responder.callsign : 'PCR Patrol Unit';
+    showC2Toast('🚔 UNIT DISPATCHED', `${responderName} en route to ${payload.sos_id} (ETA ~${payload.eta_minutes || 5}m)`, 'safe');
+    const badge = document.getElementById(`sos-badge-${payload.sos_id}`);
+    if (badge) {
+      badge.className = 'badge badge-safe';
+      badge.innerText = 'RESPONDING';
+    }
+    const card = document.getElementById(`sos-card-${payload.sos_id}`);
+    const lat = card ? card.getAttribute('data-lat') : 28.4744;
+    const lng = card ? card.getAttribute('data-lng') : 77.5040;
+    const actions = document.getElementById(`sos-actions-${payload.sos_id}`);
+    if (actions) {
+      actions.innerHTML = `
+        <button onclick="openDispatchModal('${payload.sos_id}', ${lat}, ${lng})" class="btn btn-danger btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.55rem; font-weight:700;">Assign PCR 🚔</button>
+        <button onclick="markOnScene('${payload.sos_id}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Mark On Scene</button>
+        <button onclick="openResolveModal('${payload.sos_id}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#10b981; border-color:#334155;">Resolve ✓</button>
+        <button onclick="zoomToCoords(${lat}, ${lng}, '🚨 Emergency ${payload.sos_id}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Locate 📍</button>
+      `;
+    }
+  }
+
+  else if (eventType === 'sos_location_updated') {
+    const card = document.getElementById(`sos-card-${payload.sos_id}`);
+    if (card && payload.latitude && payload.longitude) {
+      card.setAttribute('data-lat', payload.latitude);
+      card.setAttribute('data-lng', payload.longitude);
+    }
+    if (tacticalMarkers[`sos_${payload.sos_id}`] && payload.latitude && payload.longitude) {
+      tacticalMarkers[`sos_${payload.sos_id}`].setLatLng([payload.latitude, payload.longitude]);
+    }
+  }
+
+  else if (eventType === 'sos_status_change' && payload.status === 'RESOLVED') {
+    showC2Toast('✅ SOS RESOLVED', `Emergency ${payload.sos_id} secured and closed.`, 'safe');
+    const card = document.getElementById(`sos-card-${payload.sos_id}`);
+    if (card) {
+      card.style.transition = 'all 0.5s ease';
+      card.style.opacity = '0';
+      setTimeout(() => card.remove(), 500);
+    }
+  }
+
+  else if (eventType === 'incident_created') {
+    const inc = payload.incident || payload;
+    showC2Toast('⚠️ NEW INCIDENT REPORTED', `${inc.title || 'Safety Hazard'} at ${inc.location_name || 'Local Sector'}`, 'warning');
+
+    const incCountEl = document.getElementById('metric-incidents-today');
+    if (incCountEl) {
+      const current = parseInt(incCountEl.innerText) || 0;
+      incCountEl.innerText = current + 1;
+    }
+
+    const incFeed = document.getElementById('ops-tab-incidents');
+    if (incFeed) {
+      const card = document.createElement('div');
+      card.className = `ops-event-card ${inc.severity === 'CRITICAL' ? 'is-critical-incident' : 'is-warning'}`;
+      card.id = `inc-card-${inc.incident_id}`;
+      card.setAttribute('data-lat', inc.latitude);
+      card.setAttribute('data-lng', inc.longitude);
+      card.innerHTML = `
+        <div class="ops-card-header">
+          <span class="ops-card-id">${inc.incident_id}</span>
+          <span class="badge ${inc.severity === 'CRITICAL' ? 'badge-critical' : 'badge-warning'}">${inc.severity}</span>
+        </div>
+        <div class="ops-card-title">${inc.title}</div>
+        <div class="ops-card-meta">
+          <span>${inc.category}</span>
+          <span>•</span>
+          <span>${inc.location_name || 'Goa Region'}</span>
+        </div>
+        <div style="font-size:0.6875rem; color:#94a3b8;">
+          Status: <b>REPORTED</b> • Just Now
+        </div>
+        <div class="ops-card-actions">
+          <button onclick="quickResolveIncident('${inc.incident_id}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#10b981; border-color:#334155;">Resolve</button>
+          <button onclick="zoomToCoords(${inc.latitude}, ${inc.longitude}, '⚠️ Incident: ${inc.title} (${inc.incident_id})')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Locate 📍</button>
+        </div>
+      `;
+      incFeed.insertBefore(card, incFeed.firstChild);
+    }
+
+    if (tacticalMap && inc.latitude && inc.longitude) {
+      const m = L.marker([inc.latitude, inc.longitude], { icon: createCustomIcon('⚠️', '#d97706') })
+        .bindPopup(`<b>⚠️ Incident: ${inc.title}</b><br>Category: ${inc.category}<br>Severity: <b>${inc.severity}</b>`)
+        .addTo(mapLayers.incidents);
+      tacticalMarkers[`inc_${inc.incident_id}`] = m;
+    }
+  }
+}
+
+function showC2Toast(title, body, level = 'info') {
+  const container = document.getElementById('c2-toast-container') || createToastContainer();
+  const toast = document.createElement('div');
+  toast.className = `c2-toast ${level}`;
+
+  const borderColors = { critical: '#ef4444', warning: '#f59e0b', safe: '#10b981', info: '#38bdf8' };
+  toast.style.borderLeftColor = borderColors[level] || '#38bdf8';
+
+  toast.innerHTML = `
+    <div class="c2-toast-title">${title}</div>
+    <div class="c2-toast-body">${body}</div>
+  `;
+
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4500);
+}
+
+function createToastContainer() {
+  const c = document.createElement('div');
+  c.id = 'c2-toast-container';
+  c.style.cssText = 'position:fixed; bottom:1.5rem; right:1.5rem; z-index:99999; display:flex; flex-direction:column; gap:0.5rem;';
+  document.body.appendChild(c);
+  return c;
+}
+
+// 5. Layer Toggles & Operations Tab Handlers
+function initLayerToggles() {
+  const chipsContainer = document.getElementById('c2-layer-chips-container');
+  const toolsContainer = document.getElementById('c2-quick-tools-container');
+
+  if (chipsContainer && typeof L !== 'undefined') {
+    L.DomEvent.disableClickPropagation(chipsContainer);
+    L.DomEvent.disableScrollPropagation(chipsContainer);
+  }
+  if (toolsContainer && typeof L !== 'undefined') {
+    L.DomEvent.disableClickPropagation(toolsContainer);
+    L.DomEvent.disableScrollPropagation(toolsContainer);
+  }
+
+  document.querySelectorAll('.map-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const layerName = chip.getAttribute('data-layer');
+      chip.classList.toggle('active');
+
+      if (mapLayers[layerName] && tacticalMap) {
+        if (chip.classList.contains('active')) {
+          tacticalMap.addLayer(mapLayers[layerName]);
+        } else {
+          tacticalMap.removeLayer(mapLayers[layerName]);
+        }
+      }
+    });
+  });
+}
+
+function switchOpsTab(tab) {
+  document.querySelectorAll('.ops-tab-btn').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = Array.from(document.querySelectorAll('.ops-tab-btn')).find(b => b.getAttribute('onclick')?.includes(tab));
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const sosFeed = document.getElementById('ops-tab-sos');
+  const incFeed = document.getElementById('ops-tab-incidents');
+  const fleetFeed = document.getElementById('ops-tab-fleet');
+
+  if (sosFeed) sosFeed.style.display = tab === 'sos' ? 'flex' : 'none';
+  if (incFeed) incFeed.style.display = tab === 'incidents' ? 'flex' : 'none';
+  if (fleetFeed) fleetFeed.style.display = tab === 'fleet' ? 'flex' : 'none';
+}
+
+// 6. Tactical Map Positioning & Locator Functions
+function zoomToCoords(lat, lng, label) {
+  if (!tacticalMap) {
+    console.warn('Tactical map not initialized yet.');
+    return;
+  }
+
+  const latitude = parseFloat(lat);
+  const longitude = parseFloat(lng);
+
+  if (isNaN(latitude) || isNaN(longitude)) {
+    console.warn('Invalid coordinates passed to zoomToCoords:', lat, lng);
+    return;
+  }
+
+  // Ensure relevant layer is active if targeting specific entity
+  if (label) {
+    if ((label.includes('Incident') || label.includes('⚠️')) && !tacticalMap.hasLayer(mapLayers.incidents)) {
+      tacticalMap.addLayer(mapLayers.incidents);
+      document.querySelector('.map-chip[data-layer="incidents"]')?.classList.add('active');
+    }
+    if ((label.includes('SOS') || label.includes('🚨')) && !tacticalMap.hasLayer(mapLayers.sos)) {
+      tacticalMap.addLayer(mapLayers.sos);
+      document.querySelector('.map-chip[data-layer="sos"]')?.classList.add('active');
+    }
+    if ((label.includes('Fleet') || label.includes('🚔')) && !tacticalMap.hasLayer(mapLayers.fleet)) {
+      tacticalMap.addLayer(mapLayers.fleet);
+      document.querySelector('.map-chip[data-layer="fleet"]')?.classList.add('active');
+    }
+  }
+
+  tacticalMap.invalidateSize();
+  tacticalMap.flyTo([latitude, longitude], 16, { animate: true, duration: 0.8 });
+
+  // Clear previous locator pin
+  if (activeLocateMarker) {
+    tacticalMap.removeLayer(activeLocateMarker);
+    activeLocateMarker = null;
+  }
+
+  // Create pulsating radar locator pin
+  const pulseIcon = L.divIcon({
+    className: 'vigil-user-pulse-marker',
+    html: `<div style="width:24px;height:24px;background:#38bdf8;border:3px solid #ffffff;border-radius:50%;box-shadow:0 0 18px rgba(56,189,248,1);"></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+
+  activeLocateMarker = L.marker([latitude, longitude], { icon: pulseIcon, zIndexOffset: 2500 }).addTo(tacticalMap);
+  activeLocateMarker.bindPopup(`
+    <div style="font-family:sans-serif; min-width:140px; padding:3px;">
+      <div style="font-weight:700; font-size:12px; color:#0f172a;">${label || '📍 Located Target'}</div>
+      <div style="font-size:10px; color:#64748b; font-family:monospace; margin-top:2px;">${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E</div>
+    </div>
+  `, { autoClose: false }).openPopup();
+
+  // Auto-remove beacon after 10 seconds
+  setTimeout(() => {
+    if (activeLocateMarker) {
+      tacticalMap.removeLayer(activeLocateMarker);
+      activeLocateMarker = null;
+    }
+  }, 10000);
+}
+
+function zoomToOverview() {
+  if (!tacticalMap) return;
+  tacticalMap.flyTo([15.5200, 73.7900], 12, { animate: true, duration: 0.8 });
+}
+
+function zoomToFirstSOS() {
+  if (!tacticalMap) return;
+  const firstCard = document.querySelector('#ops-tab-sos .ops-event-card');
+  if (firstCard) {
+    const lat = parseFloat(firstCard.getAttribute('data-lat'));
+    const lng = parseFloat(firstCard.getAttribute('data-lng'));
+    const title = firstCard.querySelector('.ops-card-title')?.innerText || 'Active Emergency';
+    if (!isNaN(lat) && !isNaN(lng)) {
+      zoomToCoords(lat, lng, `🚨 ${title}`);
+      return;
+    }
+  }
+  showC2Toast('INFO', 'No active SOS emergencies in current sector.', 'info');
+}
+
+function zoomToFleet() {
+  if (!tacticalMap) return;
+  const fleetCards = document.querySelectorAll('#ops-tab-fleet .ops-event-card');
+  const points = [];
+  fleetCards.forEach(c => {
+    const lat = parseFloat(c.getAttribute('data-lat'));
+    const lng = parseFloat(c.getAttribute('data-lng'));
+    if (!isNaN(lat) && !isNaN(lng)) points.push([lat, lng]);
+  });
+
+  if (points.length > 0) {
+    const bounds = L.latLngBounds(points);
+    tacticalMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+  } else {
+    showC2Toast('INFO', 'No field responder units found.', 'info');
+  }
+}
+
+// 7. Tactical Emergency Action Handlers (AJAX)
+async function acknowledgeSOS(sosId) {
+  try {
+    const res = await fetch(`/emergency/api/${sosId}/acknowledge/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
+    });
+    const data = await res.json();
+    if (data.success) {
+      showC2Toast('ℹ️ SOS ACKNOWLEDGED', `Emergency ${sosId} acknowledged by C2 Desk.`, 'info');
+      const badge = document.getElementById(`sos-badge-${sosId}`);
+      if (badge) {
+        badge.className = 'badge badge-warning';
+        badge.innerText = 'ACKNOWLEDGED';
+      }
+
+      const card = document.getElementById(`sos-card-${sosId}`);
+      const lat = card ? card.getAttribute('data-lat') : 15.4989;
+      const lng = card ? card.getAttribute('data-lng') : 73.8278;
+
+      const actions = document.getElementById(`sos-actions-${sosId}`);
+      if (actions) {
+        actions.innerHTML = `
+          <button onclick="openDispatchModal('${sosId}', ${lat}, ${lng})" class="btn btn-danger btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.55rem; font-weight:700;">Assign PCR 🚔</button>
+          <button onclick="openResolveModal('${sosId}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#10b981; border-color:#334155;">Resolve ✓</button>
+          <button onclick="zoomToCoords(${lat}, ${lng}, '🚨 Emergency ${sosId}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Locate 📍</button>
+        `;
+      }
+    } else {
+      alert(data.message || 'Error acknowledging SOS');
+    }
+  } catch (err) {
+    console.error('Acknowledge error:', err);
+  }
+}
+
+async function submitDispatch() {
+  const sosId = document.getElementById('dispatch-sos-id').value;
+  const selectedResponder = document.querySelector('input[name="selected_responder"]:checked');
+  const notes = document.getElementById('dispatch-notes').value || 'Priority unit dispatched via C2 Operations Console.';
+
+  if (!sosId || !selectedResponder) {
+    alert('Please ensure SOS ID and Responder Unit are selected.');
+    return;
+  }
+
+  const responderId = selectedResponder.value;
+  const callsign = selectedResponder.getAttribute('data-callsign') || 'PCR Unit';
+  const btn = document.getElementById('btn-confirm-dispatch');
+  btn.disabled = true;
+  btn.innerText = 'Deploying...';
+
+  try {
+    const res = await fetch(`/emergency/api/${sosId}/respond/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ responder_id: responderId, notes: notes })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeDispatchModal();
+      showC2Toast('🚔 UNIT DISPATCHED', `${callsign} dispatched to ${sosId}. Responders en route.`, 'safe');
+      const badge = document.getElementById(`sos-badge-${sosId}`);
+      if (badge) {
+        badge.className = 'badge badge-safe';
+        badge.innerText = 'RESPONDING';
+      }
+
+      const card = document.getElementById(`sos-card-${sosId}`);
+      const lat = card ? card.getAttribute('data-lat') : 28.4744;
+      const lng = card ? card.getAttribute('data-lng') : 77.5040;
+
+      const actions = document.getElementById(`sos-actions-${sosId}`);
+      if (actions) {
+        actions.innerHTML = `
+          <button onclick="openDispatchModal('${sosId}', ${lat}, ${lng})" class="btn btn-danger btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.55rem; font-weight:700;">Assign PCR 🚔</button>
+          <button onclick="markOnScene('${sosId}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Mark On Scene</button>
+          <button onclick="openResolveModal('${sosId}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#10b981; border-color:#334155;">Resolve ✓</button>
+          <button onclick="zoomToCoords(${lat}, ${lng}, '🚨 Emergency ${sosId}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Locate 📍</button>
+        `;
+      }
+    } else {
+      alert(data.message || 'Error deploying responder');
+    }
+  } catch (err) {
+    console.error('Dispatch error:', err);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Confirm & Deploy Unit 🚔';
+  }
+}
+
+async function markOnScene(sosId) {
+  try {
+    const res = await fetch(`/emergency/api/${sosId}/on-scene/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ notes: 'Responder unit reported on scene.' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showC2Toast('🛡️ UNIT ON SCENE', `Responders arrived on scene for ${sosId}. Engaging assistance.`, 'safe');
+      const badge = document.getElementById(`sos-badge-${sosId}`);
+      if (badge) {
+        badge.className = 'badge badge-safe';
+        badge.innerText = 'ON SCENE';
+      }
+
+      const card = document.getElementById(`sos-card-${sosId}`);
+      const lat = card ? card.getAttribute('data-lat') : 15.4989;
+      const lng = card ? card.getAttribute('data-lng') : 73.8278;
+
+      const actions = document.getElementById(`sos-actions-${sosId}`);
+      if (actions) {
+        actions.innerHTML = `
+          <button onclick="openResolveModal('${sosId}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#10b981; border-color:#334155;">Resolve ✓</button>
+          <button onclick="zoomToCoords(${lat}, ${lng}, '🚨 Emergency ${sosId}')" class="btn btn-secondary btn-sm" style="font-size:0.6875rem; padding:0.25rem 0.5rem; background:#1e293b; color:#38bdf8; border-color:#334155;">Locate 📍</button>
+        `;
+      }
+    }
+  } catch (err) {
+    console.error('On-scene update error:', err);
+  }
+}
+
+async function submitResolve() {
+  const sosId = document.getElementById('resolve-sos-id').value;
+  const notes = document.getElementById('resolve-notes').value || 'Tourist safely assisted and confirmed secure by responders.';
+  const btn = document.getElementById('btn-confirm-resolve');
+  btn.disabled = true;
+  btn.innerText = 'Resolving...';
+
+  try {
+    const res = await fetch(`/emergency/api/${sosId}/resolve/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ notes: notes })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeResolveModal();
+      showC2Toast('✅ SOS RESOLVED', `Emergency ${sosId} marked safe and resolved.`, 'safe');
+      const card = document.getElementById(`sos-card-${sosId}`);
+      if (card) {
+        card.style.transition = 'all 0.5s ease';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 500);
+      }
+      const countEl = document.getElementById('metric-active-sos');
+      if (countEl) countEl.innerText = Math.max(0, parseInt(countEl.innerText) - 1);
+    }
+  } catch (err) {
+    console.error('Resolve error:', err);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Confirm Resolved ✓';
+  }
+}
+
+async function quickResolveIncident(incId) {
+  try {
+    const res = await fetch(`/incidents/api/${incId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ status: 'RESOLVED' })
+    });
+    if ((await res.json()).success) {
+      const card = document.getElementById(`inc-card-${incId}`);
+      if (card) {
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 500);
+      }
+    }
+  } catch (e) { console.error(e); }
+}
+
+function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 9999;
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+async function openDispatchModal(sosId, lat, lng) {
+  document.getElementById('dispatch-sos-id').value = sosId;
+  document.getElementById('dispatch-target-lat').value = lat || '';
+  document.getElementById('dispatch-target-lng').value = lng || '';
+  document.getElementById('dispatch-notes').value = '';
+  document.getElementById('c2-dispatch-modal').style.display = 'flex';
+
+  const listContainer = document.getElementById('dispatch-responders-list');
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = '<div style="color:#94a3b8; font-size:0.8125rem; padding:0.75rem; text-align:center;">📡 Loading live responder fleet & calculating ETAs...</div>';
+
+  try {
+    const res = await fetch('/emergency/api/fleet/');
+    const json = await res.json();
+    if (json.success && json.data && json.data.length > 0) {
+      let responders = json.data;
+      if (lat && lng) {
+        responders.forEach(r => {
+          if (r.current_latitude && r.current_longitude) {
+            r._dist_km = haversineDistanceKm(parseFloat(lat), parseFloat(lng), parseFloat(r.current_latitude), parseFloat(r.current_longitude));
+            r._eta_min = Math.max(2, Math.round(r._dist_km * 2.2 + 1));
+          } else {
+            r._dist_km = 9999;
+            r._eta_min = 30;
+          }
+        });
+        responders.sort((a, b) => a._dist_km - b._dist_km);
+      }
+
+      listContainer.innerHTML = responders.map((r, idx) => `
+        <label style="display:flex; align-items:center; justify-content:space-between; background:#131d33; border:1px solid ${idx === 0 ? '#38bdf8' : '#24324d'}; border-radius:6px; padding:0.65rem 0.85rem; cursor:pointer; transition:all 0.15s ease;">
+          <div style="display:flex; align-items:center; gap:0.65rem;">
+            <input type="radio" name="selected_responder" value="${r.id}" data-lat="${r.current_latitude}" data-lng="${r.current_longitude}" data-callsign="${r.callsign}" ${idx === 0 ? 'checked' : ''}>
+            <div>
+              <div style="font-weight:700; font-size:0.875rem; color:#f8fafc;">
+                ${r.callsign}
+                ${r._dist_km !== undefined && r._dist_km < 999 ? `<span style="font-size:0.75rem; color:#38bdf8; font-weight:600; margin-left:0.4rem;">📍 ${r._dist_km < 1 ? (r._dist_km * 1000).toFixed(0) + 'm' : r._dist_km.toFixed(1) + 'km'} (${r._eta_min} mins ETA)</span>` : ''}
+              </div>
+              <div style="font-size:0.6875rem; color:#94a3b8;">${r.agency_display || r.agency || 'POLICE'} • ${r.officer_in_charge} (📞 ${r.contact_number}) • Base: ${r.station_base_name || 'Station'}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <span class="badge ${r.status === 'AVAILABLE' ? 'badge-safe' : 'badge-warning'}" style="font-size:0.6875rem;">${r.status}</span>
+          </div>
+        </label>
+      `).join('');
+    } else {
+      listContainer.innerHTML = '<div style="color:#ef4444; font-size:0.8125rem; padding:0.5rem; text-align:center;">No PCR responder units currently registered.</div>';
+    }
+  } catch (err) {
+    console.error('Error loading responder fleet:', err);
+  }
+}
+
+function closeDispatchModal() { document.getElementById('c2-dispatch-modal').style.display = 'none'; }
+function openResolveModal(sosId) {
+  document.getElementById('resolve-sos-id').value = sosId;
+  document.getElementById('c2-resolve-modal').style.display = 'flex';
+}
+function closeResolveModal() { document.getElementById('c2-resolve-modal').style.display = 'none'; }
+
+function openC2AssignIncidentModal(incidentId, title, lat, lng) {
+  document.getElementById('assign-incident-id').value = incidentId;
+  document.getElementById('assign-incident-title').innerText = `Assign PCR: ${title || incidentId}`;
+  document.getElementById('assign-incident-lat').value = lat || '';
+  document.getElementById('assign-incident-lng').value = lng || '';
+  document.getElementById('assign-incident-notes').value = '';
+  document.getElementById('modal-c2-assign-incident').style.display = 'flex';
+}
+
+function closeC2AssignIncidentModal() {
+  document.getElementById('modal-c2-assign-incident').style.display = 'none';
+}
+
+async function submitC2AssignIncident() {
+  const incId = document.getElementById('assign-incident-id').value;
+  const selectedResponder = document.querySelector('input[name="selected_incident_responder"]:checked');
+  const notes = document.getElementById('assign-incident-notes').value || 'PCR unit dispatched from C2 Tactical Operations Desk.';
+
+  if (!incId || !selectedResponder) {
+    alert('Please select a responder unit.');
+    return;
+  }
+
+  const responderId = selectedResponder.value;
+  const callsign = selectedResponder.getAttribute('data-callsign') || 'PCR Unit';
+  const btn = document.getElementById('btn-confirm-assign-incident');
+  btn.disabled = true;
+  btn.innerText = 'Dispatching Unit...';
+
+  try {
+    const res = await fetch(`/incidents/api/${incId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({
+        status: 'ASSIGNED',
+        assigned_responder_id: parseInt(responderId),
+        timeline_note: notes
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeC2AssignIncidentModal();
+      showC2Toast('🚔 PCR DISPATCHED', `${callsign} assigned to incident ${incId}.`, 'safe');
+
+      const statusEl = document.getElementById(`inc-status-${incId}`);
+      if (statusEl) statusEl.innerText = 'Assigned to Responder Unit';
+
+      const respEl = document.getElementById(`inc-responder-${incId}`);
+      if (respEl) respEl.innerHTML = `🚔 Assigned: ${callsign}`;
+    } else {
+      alert(data.message || 'Error assigning responder');
+    }
+  } catch (err) {
+    console.error('Assign incident error:', err);
+    alert('Network error assigning PCR van.');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Deploy & Assign PCR 🚔';
+  }
+}
+
+function applySectorZoom() {
+  const sector = document.getElementById('filter-sector').value;
+  if (!tacticalMap) return;
+
+  if (sector === 'NORTH_COASTAL') tacticalMap.flyTo([15.5480, 73.7530], 14, { animate: true, duration: 0.8 });
+  else if (sector === 'PANAJI_CENTRAL') tacticalMap.flyTo([15.4989, 73.8278], 14, { animate: true, duration: 0.8 });
+  else if (sector === 'VAGATOR_ANJUNA') tacticalMap.flyTo([15.6000, 73.7340], 14, { animate: true, duration: 0.8 });
+  else if (sector === 'SOUTH_HERITAGE') tacticalMap.flyTo([15.2800, 73.9800], 13, { animate: true, duration: 0.8 });
+  else tacticalMap.flyTo([15.5200, 73.7900], 12, { animate: true, duration: 0.8 });
+}
+
+function applyC2Filters() {
+  const sev = document.getElementById('filter-severity').value;
+  const cat = document.getElementById('filter-category').value;
+  const stat = document.getElementById('filter-status').value;
+
+  document.querySelectorAll('#ops-tab-incidents .ops-event-card').forEach(card => {
+    let show = true;
+    const cardSev = card.querySelector('.badge')?.innerText.trim().toUpperCase() || '';
+    const cardCat = card.querySelector('.ops-card-meta span:first-child')?.innerText.trim().toUpperCase() || '';
+
+    if (sev !== 'ALL' && !cardSev.includes(sev)) show = false;
+    if (cat !== 'ALL' && !cardCat.includes(cat)) show = false;
+
+    card.style.display = show ? 'block' : 'none';
+  });
+}
+</script>
+{% endblock %}

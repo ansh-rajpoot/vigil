@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}VIGIL Design System & Component Library{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto; padding: 1rem 0;">
+
+  <!-- Header -->
+  <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+    <span class="badge badge-safe" style="margin-bottom: 0.5rem;">GovTech Standard v2.4</span>
+    <h1 style="font-size: 2rem; font-weight: 800; color: #0f172a;">VIGIL Public Safety Design System</h1>
+    <p style="font-size: 1rem; color: #64748b; margin-top: 0.25rem;">
+      Component tokens, color semantics, typography standards, and reusable UI elements engineered for public trust and emergency control operations.
+    </p>
+  </div>
+
+  <!-- 1. Semantic Color Tokens -->
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">1. Semantic Public Safety Color System</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+      <div class="card" style="padding: 1rem; border-top: 4px solid #10b981;">
+        <div style="font-weight: 700; color: #065f46; font-size: 0.875rem;">SAFE / NORMAL</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">#10b981 / #059669</div>
+        <div style="font-size: 0.75rem; color: #334155; margin-top: 0.5rem;">Verified IDs, safe zones, normal crowd density</div>
+      </div>
+
+      <div class="card" style="padding: 1rem; border-top: 4px solid #f59e0b;">
+        <div style="font-weight: 700; color: #92400e; font-size: 0.875rem;">ADVISORY / WARNING</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">#f59e0b / #d97706</div>
+        <div style="font-size: 0.75rem; color: #334155; margin-top: 0.5rem;">Weather alerts, caution zones, high density</div>
+      </div>
+
+      <div class="card" style="padding: 1rem; border-top: 4px solid #ea580c;">
+        <div style="font-weight: 700; color: #9a3412; font-size: 0.875rem;">HIGH RISK / BLACKSPOT</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">#ea580c / #c2410c</div>
+        <div style="font-size: 0.75rem; color: #334155; margin-top: 0.5rem;">Hazardous cliffs, unlit routes, high incident points</div>
+      </div>
+
+      <div class="card" style="padding: 1rem; border-top: 4px solid #ef4444;">
+        <div style="font-weight: 700; color: #991b1b; font-size: 0.875rem;">CRITICAL / EMERGENCY</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">#ef4444 / #dc2626</div>
+        <div style="font-size: 0.75rem; color: #334155; margin-top: 0.5rem;">Active SOS beacons, stampede hazards, crimes</div>
+      </div>
+
+      <div class="card" style="padding: 1rem; border-top: 4px solid #0f172a;">
+        <div style="font-weight: 700; color: #0f172a; font-size: 0.875rem;">AUTHORITY NAVY</div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">#0f172a / #1e3a8a</div>
+        <div style="font-size: 0.75rem; color: #334155; margin-top: 0.5rem;">Command & Control surfaces, official headers</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Typography Hierarchy -->
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">2. Clean Typography Standards</h2>
+    <div class="card" style="padding: 1.5rem;">
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <h1 style="font-size: 1.75rem;">Heading 1 (28px DM Sans) — Primary Page Titles</h1>
+        </div>
+        <div>
+          <h2 style="font-size: 1.375rem;">Heading 2 (22px DM Sans) — Section Headers</h2>
+        </div>
+        <div>
+          <h3 style="font-size: 1.125rem;">Heading 3 (18px DM Sans) — Card Titles & Subsections</h3>
+        </div>
+        <div>
+          <p style="font-size: 0.9375rem; color: #334155;">Body Regular (15px Inter) — High legibility interface text with balanced line heights for long-form situational context and safety guidelines.</p>
+        </div>
+        <div>
+          <div class="tabular-nums" style="font-size: 0.9375rem; color: #1e3a8a; font-weight: 600;">
+            Tabular Telemetry (JetBrains Mono): LAT 15.4989° N, LNG 73.8278° E | ID: VGL-2026-X89Q2 | TOTP: 849201 | SPEED: 0.0 km/h
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Buttons & Interactive Triggers -->
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">3. Button Tokens & Hierarchy</h2>
+    <div class="card" style="padding: 1.5rem;">
+      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+        <button class="btn btn-primary">Primary Action</button>
+        <button class="btn btn-secondary">Secondary Action</button>
+        <button class="btn btn-safe">Safe Confirmation</button>
+        <button class="btn btn-warning">Warning Action</button>
+        <button class="btn btn-danger">Critical Action</button>
+        <button class="btn btn-secondary btn-sm">Small Button</button>
+        <button class="btn btn-primary btn-lg">Large Action</button>
+        <button class="btn btn-primary" disabled>Disabled State</button>
+      </div>
+
+      <div style="margin-top: 1.5rem;">
+        <div style="font-size: 0.8125rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">TACTILE SOS PANIC TRIGGER:</div>
+        <button class="sos-trigger-btn" style="max-width: 320px;">
+          <span>🚨</span>
+          <span>TRIGGER SOS EMERGENCY</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Badges & Status Chips -->
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">4. Badges & Status Indicators</h2>
+    <div class="card" style="padding: 1.5rem;">
+      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+        <span class="badge badge-safe">Verified Safe</span>
+        <span class="badge badge-warning">Advisory Caution</span>
+        <span class="badge badge-high-risk">High Hazard</span>
+        <span class="badge badge-critical">Critical SOS Active</span>
+        <span class="badge badge-neutral">Standby / Inactive</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Alert Banners -->
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">5. Incident & Emergency Alert Banners</h2>
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div class="alert-banner alert-banner-safe">
+        <span>✅</span>
+        <div><b>Safe Corridor Active:</b> You are currently within Panaji Riverside Safe Haven. 24x7 police kiosks are nearby.</div>
+      </div>
+      <div class="alert-banner alert-banner-warning">
+        <span>⚠️</span>
+        <div><b>Weather Advisory:</b> High tide warning in effect across North Goa beaches between 18:00 and 22:00 hrs.</div>
+      </div>
+      <div class="alert-banner alert-banner-critical">
+        <span>🚨</span>
+        <div><b>EMERGENCY BREACH ALERT:</b> You entered Restricted Area 'Fort Aguada Cliff Warning Zone'. Turn back immediately.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Form Controls -->
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #0f172a;">6. Form Controls & Inputs</h2>
+    <div class="card" style="padding: 1.5rem;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="demo_input">Text Input Field</label>
+          <input type="text" id="demo_input" class="form-input" placeholder="Enter standard text...">
+          <div class="form-help">Helper text providing guidance to the user.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="demo_select">Dropdown Selector</label>
+          <select id="demo_select" class="form-select">
+            <option>Option 1 — Standard</option>
+            <option>Option 2 — High Priority</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

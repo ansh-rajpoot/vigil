@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Official Authority & Responder Onboarding — VIGIL{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto; padding: 0 1rem;">
+
+  <div style="text-align: center; margin-bottom: 1.75rem;">
+    <span class="badge badge-warning" style="margin-bottom: 0.5rem;">Restricted Official Portal</span>
+    <h1 style="font-size: 1.625rem; font-weight: 700; color: #0f172a;">Authority & Responder Registration</h1>
+    <p style="font-size: 0.875rem; color: #64748b; margin-top: 0.25rem;">
+      Authorized registration portal for Police Officers, Tourism Task Force, and 108 Emergency Responders.
+    </p>
+  </div>
+
+  <div class="card" style="box-shadow: var(--shadow-md); border-top: 4px solid #1e3a8a;">
+    <div class="card-body" style="padding: 1.75rem;">
+      <form method="post" action="{% url 'accounts:register_authority' %}" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert-banner alert-banner-critical" style="margin-bottom: 1.25rem;">
+          <span>⚠️</span>
+          <div>
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.username.id_for_label }}">Official Service ID / Username *</label>
+          {{ form.username }}
+          {% if form.username.errors %}<div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;">{{ form.username.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.first_name.id_for_label }}">First Name *</label>
+            {{ form.first_name }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.last_name.id_for_label }}">Last Name *</label>
+            {{ form.last_name }}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.email.id_for_label }}">Official Email Address *</label>
+            {{ form.email }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.phone_number.id_for_label }}">Contact Mobile *</label>
+            {{ form.phone_number }}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.role.id_for_label }}">Operational Role *</label>
+            {{ form.role }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.badge_number.id_for_label }}">Badge / Service No. *</label>
+            {{ form.badge_number }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.agency_name.id_for_label }}">Department / Agency Name *</label>
+          {{ form.agency_name }}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="{{ form.password1.id_for_label }}">Official Password *</label>
+            {{ form.password1 }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="{{ form.password2.id_for_label }}">Confirm Password *</label>
+            {{ form.password2 }}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
+          Register Official Account & Enter C2 Operations &rarr;
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 1.5rem; font-size: 0.8125rem; color: #64748b;">
+    Return to <a href="{% url 'accounts:login' %}" style="font-weight: 600; color: #1e3a8a;">Standard Sign In &rarr;</a>
+  </div>
+
+</div>
+{% endblock %}

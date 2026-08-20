@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Case Details: {{ incident.incident_id }} — VIGIL{% endblock %}
+
+{% block extra_css %}
+<style>
+  .timeline-list {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-top: 1rem;
+  }
+  .timeline-list::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 6px;
+    width: 2px;
+    background: #e2e8f0;
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 1.25rem;
+  }
+  .timeline-item:last-child {
+    margin-bottom: 0;
+  }
+  .timeline-dot {
+    position: absolute;
+    left: -1.5rem;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #2563eb;
+    box-shadow: 0 0 0 2px #ffffff;
+  }
+  .timeline-dot.is-resolved {
+    border-color: #10b981;
+  }
+  .timeline-dot.is-dispatched {
+    border-color: #f59e0b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 1rem auto; padding: 0 1rem;">
+
+  <!-- Breadcrumbs & Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: #64748b;">
+      <a href="{% url 'incidents:incident_feed' %}" style="color: #2563eb; text-decoration: none; font-weight: 600;">← All Incidents</a>
+      <span>/</span>
+      <span style="font-family: var(--font-mono); font-weight: 700; color: #0f172a;">{{ incident.incident_id }}</span>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem;">
+      <a href="{% url 'maps:gis_explorer' %}?lat={{ incident.latitude }}&lng={{ incident.longitude }}" class="btn btn-secondary btn-sm">
+        <span>📍</span> Locate on GIS Map
+      </a>
+      <a href="{% url 'incidents:tourist_report' %}" class="btn btn-primary btn-sm">
+        <span>+</span> Report Another Hazard
+      </a>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; align-items: start;">
+
+    <!-- Left Column: Case Information & Timeline -->
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+      <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-family: var(--font-mono); font-weight: 700; font-size: 0.8125rem; color: #1e3a8a;">
+              {{ incident.incident_id }}
+            </span>
+            <h1 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-top: 0.2rem;">
+              {{ incident.title }}
+            </h1>
+          </div>
+          <div style="display: flex; gap: 0.35rem;">
+            <span class="badge {% if incident.severity == 'CRITICAL' %}badge-critical{% elif incident.severity == 'HIGH' %}badge-high-risk{% else %}badge-warning{% endif %}">
+              {{ incident.get_severity_display }}
+            </span>
+            <span class="badge {% if incident.status == 'RESOLVED' %}badge-safe{% elif incident.status == 'DISPATCHED' or incident.status == 'UNDER_INVESTIGATION' %}badge-warning{% else %}badge-neutral{% endif %}">
+              {{ incident.get_status_display }}
+            </span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 0.35rem;">
+              Incident Description
+            </div>
+            <p style="font-size: 0.9375rem; color: #334155; line-height: 1.5;">
+              {{ incident.description }}
+            </p>
+          </div>
+
+          {% if incident.evidence_image %}
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 0.35rem;">
+              Uploaded Photo / Video Evidence
+            </div>
+            <img src="{{ incident.evidence_image.url }}" alt="Evidence" style="max-width: 100%; height: auto; max-height: 280px; border-radius: 8px; border: 1px solid #e2e8f0; object-fit: cover;">
+          </div>
+          {% endif %}
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 0.85rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div>
+              <div style="font-size: 0.6875rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Category</div>
+              <div style="font-size: 0.875rem; font-weight: 600; color: #0f172a; margin-top: 0.15rem;">{{ incident.get_category_display }}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.6875rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Reported At</div>
+              <div style="font-size: 0.875rem; font-weight: 600; color: #0f172a; margin-top: 0.15rem;">{{ incident.created_at|date:"M d, Y • H:i:s" }}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.6875rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Assigned Unit</div>
+              <div style="font-size: 0.875rem; font-weight: 600; color: {% if incident.assigned_responder %}#10b981{% else %}#64748b{% endif %}; margin-top: 0.15rem;">
+                {% if incident.assigned_responder %}🚔 {{ incident.assigned_responder.callsign }}{% else %}C2 Triage Queue{% endif %}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 0.6875rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Reporter</div>
+              <div style="font-size: 0.875rem; font-weight: 600; color: #0f172a; margin-top: 0.15rem;">{{ incident.reporter_name }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Timeline & Investigation Progress -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Case Timeline & Actions</span>
+          <span class="badge badge-safe">{{ timeline|length }} Updates</span>
+        </div>
+        <div class="card-body">
+          <div class="timeline-list">
+            {% for item in timeline %}
+            <div class="timeline-item">
+              <div class="timeline-dot {% if item.status == 'RESOLVED' %}is-resolved{% elif item.status == 'DISPATCHED' %}is-dispatched{% endif %}"></div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.2rem;">
+                <div style="font-weight: 700; font-size: 0.875rem; color: #0f172a;">{{ item.get_status_display }}</div>
+                <div style="font-size: 0.6875rem; color: #94a3b8; font-family: var(--font-mono);">{{ item.timestamp|date:"H:i:s • M d" }}</div>
+              </div>
+              <div style="font-size: 0.8125rem; color: #475569;">{{ item.note }}</div>
+              {% if item.actor %}
+              <div style="font-size: 0.6875rem; color: #64748b; margin-top: 0.2rem;">Action by: <b>{{ item.actor.get_full_name|default:item.actor.username }}</b></div>
+              {% endif %}
+            </div>
+            {% empty %}
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div style="font-weight: 700; font-size: 0.875rem; color: #0f172a;">Case Registered</div>
+              <div style="font-size: 0.8125rem; color: #475569;">Report logged into VIGIL C2 incident stream.</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Interactive Map & Geographic Location -->
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+      <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="card-title">Incident Location</span>
+          <span style="font-size: 0.75rem; font-family: var(--font-mono); color: #2563eb;">
+            {{ incident.latitude|floatformat:4 }}° N, {{ incident.longitude|floatformat:4 }}° E
+          </span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+          <div id="incident-detail-map" style="height: 260px; width: 100%;"></div>
+          <div style="padding: 0.85rem 1rem; border-top: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; font-size: 0.875rem; color: #0f172a; margin-bottom: 0.2rem;">
+              📍 {{ incident.location_name }}
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">
+              Exact spatial coordinates logged by reporter.
+            </div>
+            <a href="{% url 'maps:gis_explorer' %}?lat={{ incident.latitude }}&lng={{ incident.longitude }}" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">
+              Open in Full GIS Map &rarr;
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Help Notice -->
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem;">
+        <div style="font-weight: 700; font-size: 0.875rem; color: #92400e; margin-bottom: 0.35rem;">
+          ⚠️ In Active Danger?
+        </div>
+        <p style="font-size: 0.8125rem; color: #78350f; line-height: 1.4; margin-bottom: 0.75rem;">
+          If this situation escalates or you require immediate physical protection, trigger the SOS beacon immediately.
+        </p>
+        <button class="btn btn-danger btn-sm js-sos-trigger" style="width: 100%; justify-content: center;">
+          Trigger Emergency SOS 🚨
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const lat = {{ incident.latitude }};
+  const lng = {{ incident.longitude }};
+
+  if (typeof L !== 'undefined' && document.getElementById('incident-detail-map')) {
+    const map = L.map('incident-detail-map', {
+      center: [lat, lng],
+      zoom: 15,
+      zoomControl: true
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+
+    const pinIcon = L.divIcon({
+      className: 'custom-pin',
+      html: `<div style="width:30px; height:30px; background:#ea580c; border-radius:50%; border:2px solid #ffffff; box-shadow:0 3px 8px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; font-size:14px;">⚠️</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    L.marker([lat, lng], { icon: pinIcon })
+      .bindPopup(`<b>${'{{ incident.title|escapejs }}'}</b><br>ID: ${'{{ incident.incident_id }}'}`)
+      .addTo(map)
+      .openPopup();
+  }
+});
+</script>
+{% endblock %}

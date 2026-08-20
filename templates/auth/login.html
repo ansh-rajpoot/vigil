@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign In — VIGIL Public Safety & Tourist Companion{% endblock %}
+
+{% block content %}
+<div style="max-width: 440px; margin: 3rem auto; padding: 0 1rem;">
+
+  <!-- GovTech Header Card -->
+  <div style="text-align: center; margin-bottom: 2rem;">
+    <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #0f172a; border-radius: 12px; margin-bottom: 1rem; color: #ffffff; font-size: 1.75rem; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);">
+      🛡️
+    </div>
+    <h1 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;">Sign In to VIGIL</h1>
+    <p style="font-size: 0.875rem; color: #64748b; margin-top: 0.35rem;">
+      Unified secure portal for Tourists, Law Enforcement, and Tourism Administrators.
+    </p>
+  </div>
+
+  <div class="card" style="box-shadow: var(--shadow-md); border-color: var(--border-color);">
+    <div class="card-body" style="padding: 1.75rem;">
+      <form method="post" action="{% url 'accounts:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert-banner alert-banner-critical" style="margin-bottom: 1.25rem;">
+          <span>⚠️</span>
+          <div>
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.username.id_for_label }}">Username or Official ID</label>
+          {{ form.username }}
+          {% if form.username.errors %}
+          <div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.35rem;">
+            {{ form.username.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <label class="form-label" for="{{ form.password.id_for_label }}" style="margin-bottom: 0;">Password</label>
+          </div>
+          {{ form.password }}
+          {% if form.password.errors %}
+          <div style="color: #dc2626; font-size: 0.75rem; margin-top: 0.35rem;">
+            {{ form.password.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 0.9375rem;">
+          Sign In to Portal &rarr;
+        </button>
+      </form>
+    </div>
+
+    <!-- Quick Demo Accounts Switcher for Hackathon Demonstration -->
+    <div class="card-footer" style="background: #f8fafc; border-top: 1px solid var(--border-color); padding: 1rem 1.25rem; font-size: 0.75rem;">
+      <div style="font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+        ⚡ Fast Demo Auto-Fill Credentials (SIH 2026):
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+        <button type="button" onclick="fillCreds('tourist_ananya', 'pass1234')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: space-between; font-size: 0.75rem; padding: 0.35rem 0.6rem;">
+          <span>👤 <b>Tourist:</b> tourist_ananya</span>
+          <span style="color: #64748b;">(pass1234)</span>
+        </button>
+        <button type="button" onclick="fillCreds('officer_sharma', 'pass1234')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: space-between; font-size: 0.75rem; padding: 0.35rem 0.6rem;">
+          <span>👮 <b>Authority C2:</b> officer_sharma</span>
+          <span style="color: #64748b;">(pass1234)</span>
+        </button>
+        <button type="button" onclick="fillCreds('admin_director', 'pass1234')" class="btn btn-secondary btn-sm" style="text-align: left; justify-content: space-between; font-size: 0.75rem; padding: 0.35rem 0.6rem;">
+          <span>🏛️ <b>Tourism Admin:</b> admin_director</span>
+          <span style="color: #64748b;">(pass1234)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 1.5rem; font-size: 0.8125rem; color: #64748b;">
+    <div>New tourist? <a href="{% url 'accounts:register' %}" style="font-weight: 600; color: #1e3a8a;">Create Digital Tourist ID &rarr;</a></div>
+    <div style="margin-top: 0.5rem;">Law Enforcement or Responder? <a href="{% url 'accounts:register_authority' %}" style="color: #475569;">Register Authority Account</a></div>
+  </div>
+
+</div>
+
+<script>
+function fillCreds(u, p) {
+  const userField = document.getElementById('{{ form.username.id_for_label }}') || document.querySelector('input[name="username"]');
+  const passField = document.getElementById('{{ form.password.id_for_label }}') || document.querySelector('input[name="password"]');
+  if (userField && passField) {
+    userField.value = u;
+    passField.value = p;
+  }
+}
+</script>
+{% endblock %}

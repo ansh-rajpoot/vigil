@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Safety & Medical Profile — VIGIL{% endblock %}
+
+{% block content %}
+<div style="max-width: 640px; margin: 1rem auto; padding: 0 1rem;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Tourist Safety & Medical Profile</span>
+      <span class="badge badge-safe">Active Account</span>
+    </div>
+
+    <div class="card-body">
+      <form method="post" action="{% url 'tourists:profile' %}">
+        {% csrf_token %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="nationality">Nationality</label>
+            <input type="text" id="nationality" name="nationality" class="form-input" value="{{ profile.nationality }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="blood_group">Blood Group</label>
+            <select id="blood_group" name="blood_group" class="form-select">
+              <option value="">Select</option>
+              <option value="A+" {% if profile.blood_group == 'A+' %}selected{% endif %}>A+</option>
+              <option value="A-" {% if profile.blood_group == 'A-' %}selected{% endif %}>A-</option>
+              <option value="B+" {% if profile.blood_group == 'B+' %}selected{% endif %}>B+</option>
+              <option value="B-" {% if profile.blood_group == 'B-' %}selected{% endif %}>B-</option>
+              <option value="O+" {% if profile.blood_group == 'O+' %}selected{% endif %}>O+</option>
+              <option value="O-" {% if profile.blood_group == 'O-' %}selected{% endif %}>O-</option>
+              <option value="AB+" {% if profile.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+              <option value="AB-" {% if profile.blood_group == 'AB-' %}selected{% endif %}>AB-</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="destination_city">Current Destination City / State</label>
+          <input type="text" id="destination_city" name="destination_city" class="form-input" value="{{ profile.destination_city }}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="hotel_stay_details">Hotel / Resort Stay Details</label>
+          <input type="text" id="hotel_stay_details" name="hotel_stay_details" class="form-input" value="{{ profile.hotel_stay_details }}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="medical_conditions">Pre-existing Medical Conditions / Cardiac History</label>
+          <textarea id="medical_conditions" name="medical_conditions" class="form-textarea" rows="2">{{ profile.medical_conditions }}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="allergies">Known Allergies (Medications / Food)</label>
+          <input type="text" id="allergies" name="allergies" class="form-input" value="{{ profile.allergies }}">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+          Save Profile Updates
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Emergency Contacts List -->
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+      <span class="card-title">Emergency Contacts</span>
+    </div>
+    <div class="card-body">
+      {% for contact in emergency_contacts %}
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:0.75rem; border-radius:6px; border:1px solid #e2e8f0; margin-bottom:0.5rem;">
+        <div>
+          <div style="font-weight:600; font-size:0.875rem;">{{ contact.name }} ({{ contact.relationship }})</div>
+          <div style="font-size:0.75rem; color:#64748b;">{{ contact.phone_number }} {% if contact.email %}&bull; {{ contact.email }}{% endif %}</div>
+        </div>
+        <span class="badge badge-safe">Primary</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

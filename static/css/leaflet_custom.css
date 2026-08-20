@@ -1,0 +1,209 @@
+/* ==========================================================================
+   VIGIL MODERN LEAFLET MAP STYLING & HUD DESIGN SYSTEM
+   Ultra-sleek, high-contrast WebGIS styling for tourist safety navigation
+   and tactical C2 monitoring desks.
+   ========================================================================== */
+
+/* Modern Map Canvas Defaults */
+.leaflet-container {
+  background-color: #f1f5f9 !important;
+  font-family: var(--font-body, 'Inter', -apple-system, sans-serif) !important;
+  outline: none;
+}
+
+.c2-dark-map .leaflet-container {
+  background-color: #0b1120 !important;
+}
+
+/* Glassmorphic & Modern Zoom Controls */
+.leaflet-bar {
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.leaflet-bar a {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(8px) !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  line-height: 32px !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #ffffff !important;
+  color: #1e40af !important;
+  transform: scale(1.05);
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: none !important;
+}
+
+/* Modern High-End Popup Styling */
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(12px) !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18) !important;
+  padding: 0 !important;
+}
+
+.c2-dark-map .leaflet-popup-content-wrapper {
+  background: rgba(15, 23, 42, 0.96) !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0.85rem 1.1rem !important;
+  line-height: 1.45 !important;
+  font-size: 0.8125rem !important;
+}
+
+.leaflet-popup-tip-container {
+  width: 20px;
+  height: 10px;
+}
+
+.leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1) !important;
+}
+
+.c2-dark-map .leaflet-popup-tip {
+  background: #0f172a !important;
+}
+
+.leaflet-popup-close-button {
+  color: #64748b !important;
+  padding: 8px 10px 0 0 !important;
+  font-size: 18px !important;
+  transition: color 0.15s ease !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #0f172a !important;
+}
+
+.c2-dark-map .leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+}
+
+/* Popup Typography */
+.popup-title {
+  font-family: var(--font-heading, 'Inter', sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.c2-dark-map .popup-title {
+  color: #ffffff;
+}
+
+.popup-meta {
+  color: #64748b;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Custom Marker Pins */
+.custom-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.custom-pin:hover {
+  transform: scale(1.18);
+  z-index: 1000 !important;
+}
+
+.pin-sos {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border: 2.5px solid #ffffff;
+  animation: pulse-emergency 1.4s infinite;
+}
+
+.pin-responder {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: 2.5px solid #ffffff;
+}
+
+.pin-poi {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: 2px solid #ffffff;
+}
+
+.pin-blackspot {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #ffffff;
+  border: 2px solid #ffffff;
+}
+
+.pin-camera {
+  background: linear-gradient(135deg, #64748b, #475569);
+  color: #ffffff;
+  border: 2px solid #cbd5e1;
+}
+
+@keyframes pulse-emergency {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8);
+  }
+  70% {
+    box-shadow: 0 0 0 16px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* Live User GPS Marker & Pulsing Radar Halo */
+.vigil-user-pulse-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+@keyframes vigilPulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.95;
+  }
+  70% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Glowing Safe Corridor Polyline Effect */
+.safe-route-corridor {
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.safe-route-outline {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

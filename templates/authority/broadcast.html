@@ -1,0 +1,145 @@
+{% extends 'base_c2.html' %}
+{% load static %}
+
+{% block title %}Emergency Broadcast Dispatcher — VIGIL C2{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem; flex: 1; overflow-y: auto; background: #090d16;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+      <h1 style="font-size:1.5rem; font-weight:700; color:#f8fafc;">Regional Emergency Broadcast & Civil Alert Dispatcher</h1>
+      <p style="font-size:0.875rem; color:#94a3b8;">Publish civil safety warnings, disaster advisories, or geographic curfew notices directly to active tourist devices.</p>
+    </div>
+    <a href="{% url 'dashboard:c2_command' %}" class="btn btn-secondary btn-sm" style="background:#1e293b; color:#f8fafc; border-color:#334155;">&larr; Back to Tactical Map</a>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 440px; gap:1.5rem; align-items:start;">
+
+    <!-- Left: Dispatched Active Broadcasts Stream -->
+    <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+      <div class="card-header" style="background:#131d33; border-color:#24324d; display:flex; justify-content:space-between; align-items:center;">
+        <span class="card-title" style="color:#f8fafc;">Active Dispatched Alerts ({{ broadcasts.count }})</span>
+        <span style="font-size:0.6875rem; color:#10b981; font-weight:600;">● STREAMING LIVE</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div style="display:flex; flex-direction:column;">
+          {% for b in broadcasts %}
+          <div style="padding:1.15rem; border-bottom:1px solid #1e293b; background:{% if b.severity == 'CRITICAL' %}#1a1016{% elif b.severity == 'WARNING' %}#181512{% else %}#0f172a{% endif %}; border-left:4px solid {% if b.severity == 'CRITICAL' %}#ef4444{% elif b.severity == 'WARNING' %}#f59e0b{% else %}#38bdf8{% endif %};">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:1.125rem;">
+                  {% if b.alert_type == 'DISASTER' %}🌊{% elif b.alert_type == 'SEVERE_WEATHER' %}⛈️{% elif b.alert_type == 'CRIME_ACTIVITY' %}🚨{% elif b.alert_type == 'ACCIDENT' %}🚗{% elif b.alert_type == 'CROWD_EMERGENCY' %}👥{% elif b.alert_type == 'RESTRICTED_AREA' %}⛔{% else %}ℹ️{% endif %}
+                </span>
+                <span style="font-family:monospace; color:#38bdf8; font-size:0.75rem; font-weight:700;">{{ b.broadcast_code }}</span>
+                <span style="font-size:0.6875rem; color:#94a3b8; text-transform:uppercase;">[{{ b.get_alert_type_display }}]</span>
+              </div>
+              <span class="badge {% if b.severity == 'CRITICAL' %}badge-critical{% elif b.severity == 'WARNING' %}badge-warning{% else %}badge-safe{% endif %}">
+                {{ b.get_severity_display }}
+              </span>
+            </div>
+
+            <div style="font-weight:700; font-size:1rem; color:#f8fafc; margin-bottom:0.35rem;">{{ b.title }}</div>
+            <div style="font-size:0.8125rem; color:#cbd5e1; line-height:1.45; margin-bottom:0.6rem;">{{ b.message }}</div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.6875rem; color:#94a3b8; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.06);">
+              <div>
+                Target: <b style="color:#f8fafc;">{{ b.target_zone.name|default:b.get_target_type_display }}</b>
+              </div>
+              <div>
+                Expires: <span class="tabular-nums" style="color:#f8fafc;">{{ b.expires_at|date:"M d, H:i" }}</span>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div style="padding:2.5rem; text-align:center; color:#64748b; font-size:0.875rem;">
+            No active emergency alerts. All regional tourist corridors operating under normal civil status.
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Compose New Broadcast Form -->
+    <div class="card" style="background:#0f172a; border-color:#24324d; color:#f8fafc;">
+      <div class="card-header" style="background:#131d33; border-color:#24324d;">
+        <span class="card-title" style="color:#f8fafc;">Compose Emergency Broadcast</span>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'alerts:broadcast_c2' %}">
+          {% csrf_token %}
+
+          <!-- Alert Type -->
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Alert Category *</label>
+            <select name="alert_type" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155;" required>
+              {% for code, label in alert_types %}
+              <option value="{{ code }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Severity -->
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Severity & Urgency *</label>
+            <select name="severity" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155;" required>
+              <option value="CRITICAL">🔴 Critical Emergency (Immediate Evacuation / Danger)</option>
+              <option value="WARNING" selected>🟡 Warning (Heightened Vigilance / Hazard)</option>
+              <option value="ADVISORY">🔵 Advisory (Public Safety Information)</option>
+            </select>
+          </div>
+
+          <!-- Headline -->
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Headline / Title *</label>
+            <input type="text" name="title" class="form-input" style="background:#1e293b; color:#f8fafc; border-color:#334155;" placeholder="e.g. Flash Flood Evacuation Notice - Panaji Promenade" required>
+          </div>
+
+          <!-- Target Type & Zone -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+            <div class="form-group">
+              <label class="form-label" style="color:#cbd5e1;">Target Audience</label>
+              <select name="target_type" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155;">
+                <option value="ALL_TOURISTS">All Tourists in Goa</option>
+                <option value="ZONE_SPECIFIC">Specific Geofence Zone</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="color:#cbd5e1;">Geofence Zone</label>
+              <select name="target_zone" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155;">
+                <option value="">(All Sectors)</option>
+                {% for z in zones %}
+                <option value="{{ z.id }}">{{ z.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Message Body -->
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Advisory Instructions *</label>
+            <textarea name="message" class="form-textarea" rows="3" style="background:#1e293b; color:#f8fafc; border-color:#334155;" placeholder="State clear actionable safety instructions..." required></textarea>
+          </div>
+
+          <!-- Expiry Duration -->
+          <div class="form-group">
+            <label class="form-label" style="color:#cbd5e1;">Valid Duration (Alert Expiry)</label>
+            <select name="hours_valid" class="form-select" style="background:#1e293b; color:#f8fafc; border-color:#334155;">
+              <option value="2">2 Hours (Flash event / Short curfew)</option>
+              <option value="6">6 Hours</option>
+              <option value="12">12 Hours (Half-day advisory)</option>
+              <option value="24" selected>24 Hours (Full day warning)</option>
+              <option value="72">72 Hours (Long-duration disaster warning)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-warning" style="width:100%; margin-top:0.5rem; font-weight:700; padding:0.75rem; justify-content:center;">
+            <span>📢</span> Dispatch Broadcast Over WebSocket
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
